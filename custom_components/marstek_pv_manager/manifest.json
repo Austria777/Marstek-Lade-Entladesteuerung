@@ -1,0 +1,10 @@
+{
+  "domain": "marstek_pv_manager",
+  "name": "Marstek PV Manager",
+  "version": "0.4.1",
+  "integration_type": "helper",
+  "config_flow": true,
+  "codeowners": [],
+  "requirements": [],
+  "iot_class": "local_polling"
+}

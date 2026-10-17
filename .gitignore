@@ -1,0 +1,19 @@
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+venv/
+
+# Editors / OS
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Home Assistant local state and secrets (do not commit)
+secrets.yaml
+.storage/
+configuration.yaml
+home-assistant_v2.db*
+*.log

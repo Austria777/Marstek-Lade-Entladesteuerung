@@ -1,0 +1,82 @@
+{
+  "title": "Marstek PV Manager",
+  "config": {
+    "step": {
+      "user": {
+        "title": "Add Marstek manager",
+        "description": "Uses existing SolaX, PV, Marstek and EVCC entities. Starts disabled.",
+        "data": {
+          "name": "Name"
+        }
+      }
+    },
+    "abort": {
+      "already_configured": "Controller already configured"
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Configure controller",
+        "menu_options": {
+          "sources": "Sources and loads",
+          "marstek": "Marstek controls and night charging",
+          "limits": "Limits and times"
+        }
+      },
+      "sources": {
+        "title": "Sources and loads",
+        "data": {
+          "grid": "SolaX grid power (+export / -import)",
+          "solax_battery": "SolaX battery power (+charge / -discharge)",
+          "solax_soc": "SolaX battery state of charge (%)",
+          "wallbox": "Delta wallbox charging power (kW)",
+          "necharge_power": "Necharge power",
+          "necharge_active": "Necharge active",
+          "heater_1": "Heater 1",
+          "heater_2": "Heater 2",
+          "heater_3": "Heater 3",
+          "heater_4": "Heater 4",
+          "heater_5": "Heater 5",
+          "heater_6": "Heater 6",
+          "pv_total": "Total PV production (W)"
+        }
+      },
+      "marstek": {
+        "title": "Marstek controls",
+        "data": {
+          "marstek_soc": "Marstek state of charge (optional)",
+          "marstek_ac": "Marstek ac",
+          "charge_setpoint": "Charge setpoint",
+          "discharge_setpoint": "Discharge setpoint",
+          "max_discharge": "Max discharge",
+          "user_mode": "Marstek user mode",
+          "forced_mode": "Marstek forced mode",
+          "rs485": "Marstek RS485 control",
+          "night": "Night charging ownership"
+        }
+      },
+      "limits": {
+        "title": "Limits and times",
+        "data": {
+          "max_charge_w": "Maximum charge power (W)",
+          "max_discharge_w": "Maximum discharge power (W)",
+          "step_w": "Step w",
+          "export_reserve_w": "Export reserve w",
+          "minimum_charge_w": "Minimum charge w",
+          "minimum_pv_total_w": "Minimum pv total w",
+          "start_import_w": "Start import w",
+          "discharge_increase_w": "Discharge increase w",
+          "discharge_decrease_w": "Discharge decrease w",
+          "wallbox_limit_w": "Wallbox limit w",
+          "start_hour": "Start hour",
+          "end_hour": "End hour",
+          "solax_charge_soc": "Solax charge soc",
+          "solax_discharge_soc": "Solax discharge soc",
+          "emergency_charge_w": "Emergency grid charging power (W)",
+          "emergency_soc_target": "Emergency target SoC (%)"
+        }
+      }
+    }
+  }
+}

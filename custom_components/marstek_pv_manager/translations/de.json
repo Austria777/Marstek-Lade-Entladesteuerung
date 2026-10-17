@@ -1,0 +1,82 @@
+{
+  "title": "Marstek PV Manager",
+  "config": {
+    "step": {
+      "user": {
+        "title": "Marstek-Regelung hinzufügen",
+        "description": "Nutzt vorhandene SolaX-, PV-, Marstek- und EVCC-Entitäten. Die Regelung startet ausgeschaltet.",
+        "data": {
+          "name": "Name"
+        }
+      }
+    },
+    "abort": {
+      "already_configured": "Regelung bereits eingerichtet"
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Regler konfigurieren",
+        "menu_options": {
+          "sources": "Quellen und Verbraucher",
+          "marstek": "Marstek und Nachtladung",
+          "limits": "Grenzwerte und Zeiten"
+        }
+      },
+      "sources": {
+        "title": "Quellen und Verbraucher",
+        "data": {
+          "grid": "Netzleistung SolaX (+Einspeisung / -Bezug)",
+          "solax_battery": "Batterieleistung SolaX (+Laden / -Entladen)",
+          "solax_soc": "SolaX-Ladezustand (%)",
+          "wallbox": "Delta-Wallbox Ladeleistung (kW)",
+          "necharge_power": "NeCharge Ladeleistung (W)",
+          "necharge_active": "NeCharge lädt",
+          "heater_1": "Puffer Heizung 1",
+          "heater_2": "Puffer Heizung 2",
+          "heater_3": "Puffer Heizung 3",
+          "heater_4": "Warmwasser Heizung 1",
+          "heater_5": "Warmwasser Heizung 2",
+          "heater_6": "Warmwasser Heizung 3",
+          "pv_total": "PV Gesamtleistung (W)"
+        }
+      },
+      "marstek": {
+        "title": "Marstek-Steuerung",
+        "data": {
+          "marstek_soc": "Marstek-SoC (für Notfall-Netzladung erforderlich)",
+          "marstek_ac": "Marstek AC-Leistung (W)",
+          "charge_setpoint": "Marstek Ladeleistung setzen",
+          "discharge_setpoint": "Marstek Entladeleistung setzen",
+          "max_discharge": "Marstek maximale Entladeleistung",
+          "user_mode": "Marstek Benutzermodus",
+          "forced_mode": "Marstek erzwungener Modus",
+          "rs485": "Marstek RS485-Steuermodus",
+          "night": "Nachtladung hat Vorrang"
+        }
+      },
+      "limits": {
+        "title": "Grenzwerte und Zeiten",
+        "data": {
+          "max_charge_w": "Maximale Ladeleistung (W)",
+          "max_discharge_w": "Maximale Entladeleistung (W)",
+          "step_w": "Schrittweite (W)",
+          "export_reserve_w": "Reserve bei Einspeisung (W)",
+          "minimum_charge_w": "Minimale Ladeleistung (W)",
+          "minimum_pv_total_w": "Minimale PV-Leistung gesamt (W)",
+          "start_import_w": "Netzbezug zum Entladestart (W)",
+          "discharge_increase_w": "Schwelle für Entladeerhöhung (W)",
+          "discharge_decrease_w": "Schwelle für Entladereduktion (W)",
+          "wallbox_limit_w": "Wallbox aktiv ab (W)",
+          "start_hour": "Laden frühestens ab Stunde (0–23)",
+          "end_hour": "Laden bis Stunde (exklusiv, 1–24)",
+          "solax_charge_soc": "SolaX-SoC zum Laden (%)",
+          "solax_discharge_soc": "SolaX-SoC zum Entladen (%)",
+          "emergency_charge_w": "Notfall-Netzladeleistung (W)",
+          "emergency_soc_target": "Notfall-Ziel-SoC (%)"
+        }
+      }
+    }
+  }
+}
