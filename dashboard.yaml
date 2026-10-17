@@ -149,12 +149,6 @@ views:
                 name: Aktueller Marstek-Ladesollwert
               - entity: number.marstek_venus_modbus_entladeleistung_einstellen
                 name: Aktueller Marstek-Entladesollwert
-          - type: markdown
-            content: >-
-              **Hinweis:** Beide Limits sind von **0 bis 2.500 W** in **100-W-Schritten** regelbar.
-              0 W sperrt diese Richtung nur in der Automatik. Die wirksamen Werte können
-              wegen der Modbus-Gerätegrenzen niedriger sein.
-    
       - type: grid
         cards:
           - type: heading
@@ -209,22 +203,6 @@ views:
                 icon: mdi:flash
                 icon_color: amber
                 content: "Max. {{ states('sensor.marstek_pv_manager_wirksame_notfall_ladeleistung') }} W"
-          - type: markdown
-            grid_options:
-              columns: full
-            content: >-
-              **So funktioniert's:** Automatik einschalten, 10-%-Nachtladung muss
-              inaktiv sein, Ladeleistung (0–2500 W) und Ziel-SoC einstellen,
-              dann **Notfall-Netzladung** aktivieren. Die Marstek lädt dabei
-              bewusst **aus dem Stromnetz**, auch ohne PV-Überschuss. Am Ziel-SoC
-              stoppt das Laden; die automatische Entladung bleibt gesperrt,
-              solange der Notfall-Schalter an ist.
-
-              **Wichtig:** Nur vorsorglich **vor** einem Netzausfall laden.
-              Das Notstromversorgen von Verbrauchern erfordert einen passend
-              angeschlossenen Backup-/EPS-Ausgang und sichere Netztrennung.
-              Nach Home-Assistant-Neustart ist der Notfall-Schalter aus.
-
       - type: grid
         cards:
           - type: heading
