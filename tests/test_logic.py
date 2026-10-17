@@ -246,3 +246,63 @@ class AggregatePvSensorTests(unittest.TestCase):
     def test_missing_pv_does_not_prevent_discharge(self):
         d = evaluate(base(pv_total=None, grid=-400, solax_soc=10), Settings(), 12, True)
         self.assertEqual(d.mode, "discharge")
+
+
+class IntegratedNightReserveTests(unittest.TestCase):
+    def plan(self, hour=2, soc=9.9, enabled=True, active=False, guard=False,
+             control_valid=True):
+        return module.evaluate_night(
+            hour=hour, soc=soc, enabled=enabled, active=active,
+            guard=guard, control_valid=control_valid,
+        )
+
+    def test_disabled_never_starts(self):
+        self.assertEqual(self.plan(enabled=False).action, "off")
+
+    def test_only_00_to_06(self):
+        self.assertEqual(self.plan(hour=0).action, "start")
+        self.assertEqual(self.plan(hour=5).action, "start")
+        self.assertEqual(self.plan(hour=6).action, "wait")
+        self.assertEqual(self.plan(hour=23).action, "wait")
+
+    def test_start_below_10_only(self):
+        self.assertEqual(self.plan(soc=9.99).action, "start")
+        self.assertEqual(self.plan(soc=10).action, "wait")
+        self.assertEqual(self.plan(soc=10.5).action, "wait")
+
+    def test_charge_through_hysteresis_band(self):
+        self.assertEqual(self.plan(active=True, guard=True, soc=10.8).action, "charge")
+        self.assertEqual(self.plan(active=True, guard=True, soc=10.0).action, "charge")
+
+    def test_stop_at_11(self):
+        self.assertEqual(self.plan(active=True, guard=True, soc=11).action, "stop")
+        self.assertEqual(self.plan(active=True, guard=True, soc=12).action, "stop")
+
+    def test_stop_at_06_even_below_11(self):
+        self.assertEqual(self.plan(hour=6, active=True, guard=True).action, "stop")
+
+    def test_disable_stops_active_reserve(self):
+        self.assertEqual(self.plan(enabled=False, active=True, guard=True).action, "stop")
+
+    def test_missing_soc_never_starts(self):
+        self.assertEqual(self.plan(soc=None).action, "wait")
+        self.assertEqual(self.plan(soc=float('nan')).action, "wait")
+
+    def test_missing_soc_during_active_charge_must_abort(self):
+        self.assertEqual(self.plan(active=True, guard=True, soc=None).action, "invalid")
+
+    def test_missing_control_never_starts(self):
+        self.assertEqual(self.plan(control_valid=False).action, "wait")
+
+    def test_lost_guard_aborts_active_control(self):
+        self.assertEqual(self.plan(active=True, guard=False).action, "invalid")
+
+    def test_unknown_guard_blocks_activation(self):
+        self.assertEqual(self.plan(guard=None).action, "wait")
+
+    def test_external_owner_is_not_overwritten(self):
+        self.assertEqual(self.plan(guard=True).action, "external")
+
+    def test_active_night_ignores_main_manager_switch(self):
+        # The separate night-enabled flag, not main enabled, drives charging.
+        self.assertEqual(self.plan(enabled=True, active=True, guard=True).action, "charge")

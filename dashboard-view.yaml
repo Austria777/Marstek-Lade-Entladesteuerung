@@ -20,20 +20,22 @@ sections:
     chips:
     - type: template
       icon: mdi:transmission-tower-import
-      icon_color: '{{ ''amber'' if is_state(''switch.marstek_pv_manager_notfall_netzladung'',''on'') else ''grey''
-        }}'
-      content: '{{ ''Notfall EIN'' if is_state(''switch.marstek_pv_manager_notfall_netzladung'',''on'') else ''Notfall
-        AUS'' }}'
+      icon_color: '{{ ''amber'' if is_state(''switch.marstek_pv_manager_notfall_netzladung'',''on'') else
+        ''grey'' }}'
+      content: '{{ ''Notfall EIN'' if is_state(''switch.marstek_pv_manager_notfall_netzladung'',''on'')
+        else ''Notfall AUS'' }}'
       tap_action:
         action: more-info
         entity: switch.marstek_pv_manager_notfall_netzladung
     - type: template
-      icon: '{% set m = states(''sensor.marstek_pv_manager_betriebsmodus'') %} {{ ''mdi:battery-arrow-up'' if m
-        == ''charge'' else ''mdi:battery-arrow-down'' if m == ''discharge'' else ''mdi:weather-night'' if m == ''night''
-        else ''mdi:pause-circle'' if m in [''idle'',''disabled''] else ''mdi:alert-circle'' }}'
-      icon_color: '{% set m = states(''sensor.marstek_pv_manager_betriebsmodus'') %} {{ ''amber'' if m in [''emergency_charge'',''emergency_hold'']
-        else ''red'' if m == ''emergency_blocked'' else ''green'' if m == ''charge'' else ''blue'' if m == ''discharge''
-        else ''purple'' if m == ''night'' else ''grey'' if m in [''idle'',''disabled''] else ''red'' }}'
+      icon: '{% set m = states(''sensor.marstek_pv_manager_betriebsmodus'') %} {{ ''mdi:battery-arrow-up''
+        if m == ''charge'' else ''mdi:battery-arrow-down'' if m == ''discharge'' else ''mdi:weather-night''
+        if m == ''night'' else ''mdi:pause-circle'' if m in [''idle'',''disabled''] else ''mdi:alert-circle''
+        }}'
+      icon_color: '{% set m = states(''sensor.marstek_pv_manager_betriebsmodus'') %} {{ ''amber'' if m
+        in [''emergency_charge'',''emergency_hold''] else ''red'' if m == ''emergency_blocked'' else ''green''
+        if m == ''charge'' else ''blue'' if m == ''discharge'' else ''purple'' if m == ''night'' else
+        ''grey'' if m in [''idle'',''disabled''] else ''red'' }}'
       content: '{% set m = states(''sensor.marstek_pv_manager_betriebsmodus'') %} {{ {''emergency_charge'':''Netzladung'',''emergency_hold'':''Reserve
         hält'',''emergency_blocked'':''Netzladung gesperrt'',''charge'':''PV-Ladung'',''discharge'':''Entladung'',''idle'':''Bereit'',''night'':''Nachtladung'',''disabled'':''Regelung
         AUS'',''unavailable'':''Störung''}.get(m,''Unbekannt'') }}'
@@ -56,10 +58,10 @@ sections:
         entity: sensor.solax_m_battery_capacity_2
     - type: template
       icon: mdi:weather-night
-      icon_color: '{{ ''purple'' if is_state(''input_boolean.marstek_10_soc_nachtladung'',''on'') else ''grey''
-        }}'
-      content: '{{ ''Nachtladung aktiv'' if is_state(''input_boolean.marstek_10_soc_nachtladung'',''on'') else ''Nachtladung
-        aus'' }}'
+      icon_color: '{{ ''purple'' if is_state(''input_boolean.marstek_10_soc_nachtladung'',''on'') else
+        ''grey'' }}'
+      content: '{{ ''Nachtladung aktiv'' if is_state(''input_boolean.marstek_10_soc_nachtladung'',''on'')
+        else ''Nachtladung aus'' }}'
       tap_action:
         action: more-info
         entity: input_boolean.marstek_10_soc_nachtladung
@@ -68,19 +70,20 @@ sections:
       columns: 12
     entity: sensor.marstek_pv_manager_regelstatus
     primary: '{% set mode = states(''sensor.marstek_pv_manager_betriebsmodus'') %} {{ {''emergency_charge'':''Notfall-Netzladung
-      aktiv'',''emergency_hold'':''Notfall-Reserve wird gehalten'',''emergency_blocked'':''Notfall-Netzladung gesperrt'',''charge'':''PV-Überschuss
-      wird gespeichert'',''discharge'':''Marstek versorgt das Haus'',''idle'':''Regelung in Bereitschaft'',''night'':''Nachtladung
-      hat Vorrang'',''disabled'':''Automatik ist ausgeschaltet'',''unavailable'':''Regelung prüfen''}.get(mode,
-      ''Regelstatus unbekannt'') }}'
+      aktiv'',''emergency_hold'':''Notfall-Reserve wird gehalten'',''emergency_blocked'':''Notfall-Netzladung
+      gesperrt'',''charge'':''PV-Überschuss wird gespeichert'',''discharge'':''Marstek versorgt das Haus'',''idle'':''Regelung
+      in Bereitschaft'',''night'':''Nachtladung hat Vorrang'',''disabled'':''Automatik ist ausgeschaltet'',''unavailable'':''Regelung
+      prüfen''}.get(mode, ''Regelstatus unbekannt'') }}'
     secondary: '{{ states(''sensor.marstek_pv_manager_regelstatus'') }}'
     icon: '{% set m = states(''sensor.marstek_pv_manager_betriebsmodus'') %} {{ ''mdi:transmission-tower-import''
       if m == ''emergency_charge'' else ''mdi:battery-check'' if m == ''emergency_hold'' else ''mdi:solar-power''
       if m == ''charge'' else ''mdi:home-lightning-bolt-outline'' if m == ''discharge'' else ''mdi:weather-night''
-      if m == ''night'' else ''mdi:power-standby'' if m == ''disabled'' else ''mdi:shield-check-outline'' if m ==
-      ''idle'' else ''mdi:alert-circle'' }}'
+      if m == ''night'' else ''mdi:power-standby'' if m == ''disabled'' else ''mdi:shield-check-outline''
+      if m == ''idle'' else ''mdi:alert-circle'' }}'
     color: '{% set m = states(''sensor.marstek_pv_manager_betriebsmodus'') %} {{ ''amber'' if m in [''emergency_charge'',''emergency_hold'']
-      else ''red'' if m == ''emergency_blocked'' else ''green'' if m == ''charge'' else ''blue'' if m == ''discharge''
-      else ''purple'' if m == ''night'' else ''red'' if m == ''unavailable'' else ''grey'' }}'
+      else ''red'' if m == ''emergency_blocked'' else ''green'' if m == ''charge'' else ''blue'' if m
+      == ''discharge'' else ''purple'' if m == ''night'' else ''red'' if m == ''unavailable'' else ''grey''
+      }}'
     tap_action:
       action: more-info
   - type: custom:marstek-energy-flow-card
@@ -150,6 +153,28 @@ sections:
       name: Aktueller Marstek-Ladesollwert
     - entity: number.marstek_venus_modbus_entladeleistung_einstellen
       name: Aktueller Marstek-Entladesollwert
+  - type: heading
+    heading: Mindest-SoC · Nachtladung
+    heading_style: subtitle
+  - type: tile
+    entity: switch.marstek_pv_manager_mindest_soc_nachtladung
+    name: Nachtreserve 00:00–06:00
+    icon: mdi:weather-night
+    features:
+    - type: toggle
+    grid_options:
+      columns: full
+  - type: custom:mushroom-template-card
+    entity: sensor.marstek_pv_manager_nachtladung_status
+    primary: 'Nachtladung: 10 % → 11 %'
+    secondary: '{{ states(''sensor.marstek_pv_manager_nachtladung_status'') }}'
+    icon: mdi:battery-clock-outline
+    color: '{{ ''purple'' if is_state(''input_boolean.marstek_10_soc_nachtladung'',''on'') else ''grey''
+      }}'
+    grid_options:
+      columns: 12
+    tap_action:
+      action: more-info
 - type: grid
   cards:
   - type: heading
@@ -157,11 +182,12 @@ sections:
     heading_style: title
   - type: custom:mushroom-template-card
     entity: switch.marstek_pv_manager_notfall_netzladung
-    primary: '{{ ''Netzladung aktiviert'' if is_state(''switch.marstek_pv_manager_notfall_netzladung'',''on'') else
-      ''Notfall-Reserve aufladen'' }}'
+    primary: '{{ ''Netzladung aktiviert'' if is_state(''switch.marstek_pv_manager_notfall_netzladung'',''on'')
+      else ''Notfall-Reserve aufladen'' }}'
     secondary: '{{ states(''sensor.marstek_pv_manager_notfall_status'') }}'
     icon: mdi:transmission-tower-import
-    color: '{{ ''amber'' if is_state(''switch.marstek_pv_manager_notfall_netzladung'',''on'') else ''grey'' }}'
+    color: '{{ ''amber'' if is_state(''switch.marstek_pv_manager_notfall_netzladung'',''on'') else ''grey''
+      }}'
     tap_action:
       action: more-info
     grid_options:
@@ -213,10 +239,10 @@ sections:
     primary: '{{ ''Entladung freigegeben'' if is_state(''sensor.marstek_pv_manager_entladesperre'',''Freigegeben'')
       else ''Entladung aktuell gesperrt'' }}'
     secondary: '{{ states(''sensor.marstek_pv_manager_entladesperre'') }}'
-    icon: '{{ ''mdi:shield-check'' if is_state(''sensor.marstek_pv_manager_entladesperre'',''Freigegeben'') else
-      ''mdi:shield-lock-outline'' }}'
-    color: '{{ ''green'' if is_state(''sensor.marstek_pv_manager_entladesperre'',''Freigegeben'') else ''amber''
-      }}'
+    icon: '{{ ''mdi:shield-check'' if is_state(''sensor.marstek_pv_manager_entladesperre'',''Freigegeben'')
+      else ''mdi:shield-lock-outline'' }}'
+    color: '{{ ''green'' if is_state(''sensor.marstek_pv_manager_entladesperre'',''Freigegeben'') else
+      ''amber'' }}'
     grid_options:
       columns: 12
     tap_action:
@@ -225,11 +251,11 @@ sections:
     entity: sensor.evcc_delta_ac_smart_wallbox_charge_power
     primary: Delta-Wallbox
     secondary: "{% if has_value('sensor.evcc_delta_ac_smart_wallbox_charge_power') %}\n  {{ states('sensor.evcc_delta_ac_smart_wallbox_charge_power')\
-      \ }} kW · {{ 'Lädt' if states('sensor.evcc_delta_ac_smart_wallbox_charge_power') | float(0) > 0.05 else 'Bereit'\
-      \ }}\n{% else %}Keine Messwerte{% endif %}"
+      \ }} kW · {{ 'Lädt' if states('sensor.evcc_delta_ac_smart_wallbox_charge_power') | float(0) > 0.05\
+      \ else 'Bereit' }}\n{% else %}Keine Messwerte{% endif %}"
     icon: mdi:ev-station
-    color: '{{ ''amber'' if states(''sensor.evcc_delta_ac_smart_wallbox_charge_power'') | float(0) > 0.05 else ''grey''
-      }}'
+    color: '{{ ''amber'' if states(''sensor.evcc_delta_ac_smart_wallbox_charge_power'') | float(0) > 0.05
+      else ''grey'' }}'
     grid_options:
       columns: 6
   - type: custom:mushroom-template-card
@@ -246,9 +272,9 @@ sections:
   - type: custom:mushroom-template-card
     entity: switch.puffer_shellypro3_output_1
     primary: Pufferspeicher-Heizung
-    secondary: '{% set on = (1 if is_state(''switch.puffer_shellypro3_output_1'',''on'') else 0) + (1 if is_state(''switch.puffer_shellypro3_output_2'',''on'')
-      else 0) + (1 if is_state(''switch.puffer_shellypro3_output_3'',''on'') else 0) %} {{ on }} von 3 Heizkanälen
-      aktiv'
+    secondary: '{% set on = (1 if is_state(''switch.puffer_shellypro3_output_1'',''on'') else 0) + (1
+      if is_state(''switch.puffer_shellypro3_output_2'',''on'') else 0) + (1 if is_state(''switch.puffer_shellypro3_output_3'',''on'')
+      else 0) %} {{ on }} von 3 Heizkanälen aktiv'
     icon: mdi:water-boiler
     color: '{{ ''amber'' if is_state(''switch.puffer_shellypro3_output_1'',''on'') or is_state(''switch.puffer_shellypro3_output_2'',''on'')
       or is_state(''switch.puffer_shellypro3_output_3'',''on'') else ''grey'' }}'
@@ -257,9 +283,9 @@ sections:
   - type: custom:mushroom-template-card
     entity: switch.warmwasser_shellypro3_output_1
     primary: Warmwasser-Heizung
-    secondary: '{% set on = (1 if is_state(''switch.warmwasser_shellypro3_output_1'',''on'') else 0) + (1 if is_state(''switch.warmwasser_shellypro3_output_2'',''on'')
-      else 0) + (1 if is_state(''switch.warmwasser_shellypro3_output_3'',''on'') else 0) %} {{ on }} von 3 Heizkanälen
-      aktiv'
+    secondary: '{% set on = (1 if is_state(''switch.warmwasser_shellypro3_output_1'',''on'') else 0) +
+      (1 if is_state(''switch.warmwasser_shellypro3_output_2'',''on'') else 0) + (1 if is_state(''switch.warmwasser_shellypro3_output_3'',''on'')
+      else 0) %} {{ on }} von 3 Heizkanälen aktiv'
     icon: mdi:water-thermometer
     color: '{{ ''amber'' if is_state(''switch.warmwasser_shellypro3_output_1'',''on'') or is_state(''switch.warmwasser_shellypro3_output_2'',''on'')
       or is_state(''switch.warmwasser_shellypro3_output_3'',''on'') else ''grey'' }}'
@@ -307,7 +333,7 @@ sections:
   - type: markdown
     grid_options:
       columns: full
-    content: '**Vorzeichen:** Netz **+ = Einspeisung**, **− = Bezug** · Marstek **+ = Entladung**, **− = Ladung**
-      · SolaX **+ = Ladung**, **− = Entladung**. Die zentrale Hausleistung im Energiefluss ist ein **Schätzwert**
-      aus PV + Marstek − SolaX-Akkuladung − Netzeinspeisung. Verluste und nicht erfasste Erzeuger/Verbraucher sind
-      nicht berücksichtigt.'
+    content: '**Vorzeichen:** Netz **+ = Einspeisung**, **− = Bezug** · Marstek **+ = Entladung**, **−
+      = Ladung** · SolaX **+ = Ladung**, **− = Entladung**. Die zentrale Hausleistung im Energiefluss
+      ist ein **Schätzwert** aus PV + Marstek − SolaX-Akkuladung − Netzeinspeisung. Verluste und nicht
+      erfasste Erzeuger/Verbraucher sind nicht berücksichtigt.'

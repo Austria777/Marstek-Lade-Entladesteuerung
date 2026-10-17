@@ -24,6 +24,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
         MarstekManagerSensor(controller, entry, "effective_emergency", "Wirksame Notfall Ladeleistung"),
         MarstekManagerSensor(controller, entry, "emergency_status", "Notfall Status"),
         MarstekManagerSensor(controller, entry, "marstek_soc", "Marstek Ladezustand"),
+        MarstekManagerSensor(controller, entry, "night_status", "Nachtladung Status"),
     ])
 
 
@@ -75,6 +76,9 @@ class MarstekManagerSensor(SensorEntity):
                 "emergency_target_reached": "Notfall-Ziel-SoC erreicht · Reserve wird gehalten",
                 "emergency_zero_power": "Notfallmodus an, Ladeleistung 0 W",
                 "emergency_missing_data": "Notfall-Netzladung blockiert: Messwerte fehlen",
+                "night_reserve_charge": "Mindest-SoC-Nachtladung 400 W aktiv",
+                "night_missing_data": "Nachtladung: Messwerte fehlen",
+                "night_guard_lost": "Nachtladung: Sperrhelfer nicht verfügbar",
             }.get(d.reason, d.reason)
         if self.key == "discharge_lock":
             from .logic import discharge_lock_reason
@@ -85,6 +89,8 @@ class MarstekManagerSensor(SensorEntity):
             return self.controller.settings().max_discharge_w
         if self.key == "effective_emergency":
             return self.controller.settings().emergency_charge_w
+        if self.key == "night_status":
+            return self.controller.night_status
         if self.key == "emergency_status":
             if not self.controller.emergency_enabled:
                 return "Aus"

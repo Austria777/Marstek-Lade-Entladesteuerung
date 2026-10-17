@@ -207,6 +207,44 @@ def evaluate(data: Inputs, s: Settings, hour: int, enabled: bool,
     return Decision("idle", 0, 0, charge_target, discharge_target, pv_total, reason)
 
 
+
+@dataclass(frozen=True)
+class NightPlan:
+    """Pure state-machine output for the integrated night reserve charger."""
+    action: str  # off, wait, external, start, charge, stop, invalid
+    reason: str
+
+
+def evaluate_night(*, enabled: bool, active: bool, guard: bool | None,
+                   soc: float | None, hour: int,
+                   control_valid: bool) -> NightPlan:
+    """10->11% hysteresis, 00:00-06:00; active ownership has stop priority."""
+    window = 0 <= hour < 6
+    if active:
+        if not enabled or not window:
+            return NightPlan("stop", "night_window_ended")
+        if not control_valid or soc is None or not isfinite(soc) or not 0 <= soc <= 100:
+            return NightPlan("invalid", "night_missing_data")
+        if soc >= 11:
+            return NightPlan("stop", "night_target_reached")
+        if guard is not True:
+            return NightPlan("invalid", "night_guard_lost")
+        return NightPlan("charge", "night_reserve_charge")
+    if not enabled:
+        return NightPlan("off", "night_off")
+    if guard is None:
+        return NightPlan("wait", "night_guard_unknown")
+    if guard is True:
+        return NightPlan("external", "night_external_owner")
+    if not window:
+        return NightPlan("wait", "night_outside_window")
+    if soc is None or not isfinite(soc) or not 0 <= soc <= 100 or not control_valid:
+        return NightPlan("wait", "night_missing_data")
+    if soc < 10:
+        return NightPlan("start", "night_reserve_charge")
+    return NightPlan("wait", "night_soc_ok")
+
+
 def discharge_lock_reason(data: Inputs, s: Settings, enabled: bool, emergency: bool = False) -> str:
     """Human-readable explanation why discharge is currently locked."""
     if not enabled:

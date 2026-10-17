@@ -61,4 +61,5 @@ DEFAULTS: dict[str, str | int | bool] = {
     **{key: item[0] for key, item in ENTITY_FIELDS.items()},
     **{key: values[0] for key, values in PARAMETERS.items()},
     "enabled": False,
+    "night_enabled": False,
 }
