@@ -28,6 +28,8 @@ class Settings:
     solax_discharge_soc: int = 11
     emergency_charge_w: int = 500
     emergency_soc_target: int = 90
+    night_start_soc: int = 9
+    night_target_soc: int = 11
 
 
 @dataclass(frozen=True)
@@ -216,16 +218,24 @@ class NightPlan:
 
 
 def evaluate_night(*, enabled: bool, active: bool, guard: bool | None,
-                   soc: float | None, hour: int,
-                   control_valid: bool) -> NightPlan:
-    """10->11% hysteresis, 00:00-06:00; active ownership has stop priority."""
+                   soc: float | None, hour: int, control_valid: bool,
+                   start_soc: int = 9, target_soc: int = 11) -> NightPlan:
+    """Night hysteresis 00:00–06:00; configurable displayed SoC band.
+
+    A start setting of 9% includes the 9.0–9.99% band, retaining v0.5.2
+    behavior (start below 10%). Never start if the target is already reached.
+    """
     window = 0 <= hour < 6
+    valid_levels = (9 <= start_soc <= 100 and 10 <= target_soc <= 100
+                    and start_soc <= target_soc)
     if active:
         if not enabled or not window:
             return NightPlan("stop", "night_window_ended")
+        if not valid_levels:
+            return NightPlan("invalid", "night_config_invalid")
         if not control_valid or soc is None or not isfinite(soc) or not 0 <= soc <= 100:
             return NightPlan("invalid", "night_missing_data")
-        if soc >= 11:
+        if soc >= target_soc:
             return NightPlan("stop", "night_target_reached")
         if guard is not True:
             return NightPlan("invalid", "night_guard_lost")
@@ -238,12 +248,14 @@ def evaluate_night(*, enabled: bool, active: bool, guard: bool | None,
         return NightPlan("external", "night_external_owner")
     if not window:
         return NightPlan("wait", "night_outside_window")
+    if not valid_levels:
+        return NightPlan("wait", "night_config_invalid")
     if soc is None or not isfinite(soc) or not 0 <= soc <= 100 or not control_valid:
         return NightPlan("wait", "night_missing_data")
-    if soc < 10:
+    # e.g. "start 9%" begins at 9.x%, matching what HA users read onscreen.
+    if soc < min(start_soc + 1, target_soc):
         return NightPlan("start", "night_reserve_charge")
     return NightPlan("wait", "night_soc_ok")
-
 
 def discharge_lock_reason(data: Inputs, s: Settings, enabled: bool, emergency: bool = False) -> str:
     """Human-readable explanation why discharge is currently locked."""
