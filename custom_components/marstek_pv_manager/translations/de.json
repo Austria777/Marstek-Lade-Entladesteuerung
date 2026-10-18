@@ -82,7 +82,7 @@
       }
     },
     "error": {
-      "night_soc_order": "Der Start-SoC darf nicht größer als der Ziel-SoC sein."
+      "night_soc_order": "Der Ziel-SoC muss mindestens 1 Prozentpunkt über dem Start-SoC liegen."
     }
   }
 }
