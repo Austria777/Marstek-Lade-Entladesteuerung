@@ -75,9 +75,14 @@
           "solax_charge_soc": "Solax charge soc",
           "solax_discharge_soc": "Solax discharge soc",
           "emergency_charge_w": "Emergency grid charging power (W)",
-          "emergency_soc_target": "Emergency target SoC (%)"
+          "emergency_soc_target": "Emergency target SoC (%)",
+          "night_start_soc": "Start night charge at displayed SoC (%)",
+          "night_target_soc": "Stop night charge at target SoC (%)"
         }
       }
+    },
+    "error": {
+      "night_soc_order": "Night charge start SoC cannot exceed the target SoC."
     }
   }
 }
