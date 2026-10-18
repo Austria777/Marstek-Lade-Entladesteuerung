@@ -1,8 +1,33 @@
-# Marstek Energy Studio v0.5.0 – integrierte Nachtladung
+# Marstek Energy Studio v0.5.1 – optionale Hardware-Ladegrenze
 
 **Integrierte Nachtladefunktion bislang nur in simulierten Tests geprüft; Notfall-Netzladung wurde bereits mit 300 W am Nutzergerät getestet.** Für diesen Modus greift die Integration auf die bestehenden Marstek-Venus-Modbus-Schreibentitäten zu. Zuerst separat und beaufsichtigt testen.
 
 
+
+## Neu in v0.5.1 – Geräte-Ladegrenze (bewusst opt-in)
+
+Bei einem realen Geräte-Ladelimit von 2000 W begrenzt der neue Regler die
+**wirksame** PV-/Notfall-Ladegrenze ebenfalls auf 2000 W, auch wenn das Dashboard
+2500 W anfordert. Das zeigt der Sensor `sensor.marstek_pv_manager_hardware_ladelimit`.
+
+Neuer Schalter `switch.marstek_pv_manager_auto_ladelimit`
+steht **standardmäßig AUS**. Erst nach Prüfung von Gerät, Zuleitung,
+Steckverbindung, Schutzorgan und zulässiger Dauerlast darf die Synchronisierung
+bewusst aktiviert werden. Bei aktiver Lade-/Notfallregelung passt sie dann die
+Modbus-Entität `number.marstek_venus_modbus_maximale_ladeleistung` an den
+jeweiligen Ladeleistungsregler an (innerhalb des am Gerät gemeldeten Bereichs).
+Es erfolgt **keine Erhöhung beim Update oder ohne eingeschaltete Automatik**.
+Die integrierte 400-W-Nachtladung bleibt davon unangetastet. Änderungen an der
+Geräte-Ladegrenze werden vor Erhöhung des Sollwerts zurückgelesen; bei fehlender
+Rückmeldung wird eine Leistungserhöhung aufgeschoben. Beim Ausschalten der
+Synchronisierung bleibt die zuletzt gesetzte Geräte-Grenze bestehen; sie
+wird nicht automatisch auf 2000 W zurückgesetzt.
+
+Für ein erstes Upgrade Backup erstellen und ohne Synchronisierung prüfen;
+bei vorhandener Modbus-Entität muss das Gerätelimit in den
+Integrationsoptionen korrekt auf `number.marstek_venus_modbus_maximale_ladeleistung`
+stehen. Die tatsächliche Ladeleistung hängt zusätzlich vom PV-Überschuss,
+Batterie-SoC und physikalischen Voraussetzungen ab.
 
 ## Neu in v0.5.0 – Mindest-SoC-Nachtladung ohne separate YAML
 

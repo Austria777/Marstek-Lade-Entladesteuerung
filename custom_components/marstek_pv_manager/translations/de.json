@@ -49,6 +49,7 @@
           "marstek_ac": "Marstek AC-Leistung (W)",
           "charge_setpoint": "Marstek Ladeleistung setzen",
           "discharge_setpoint": "Marstek Entladeleistung setzen",
+          "max_charge": "Marstek maximale Ladeleistung (Gerät)",
           "max_discharge": "Marstek maximale Entladeleistung",
           "user_mode": "Marstek Benutzermodus",
           "forced_mode": "Marstek erzwungener Modus",

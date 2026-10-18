@@ -120,6 +120,14 @@ sections:
     display_mode: slider
     grid_options:
       columns: 12
+  - type: tile
+    entity: switch.marstek_pv_manager_auto_ladelimit
+    name: Geräte-Ladelimit automatisch übernehmen
+    icon: mdi:battery-sync
+    features:
+      - type: toggle
+    grid_options:
+      columns: full
   - type: custom:mushroom-number-card
     entity: number.marstek_pv_manager_maximale_entladeleistung
     name: Maximale Entladeleistung

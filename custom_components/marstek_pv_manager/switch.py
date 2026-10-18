@@ -10,7 +10,7 @@ from .const import DOMAIN
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_entities):
-    async_add_entities([MarstekManagerEnableSwitch(entry.runtime_data, entry), MarstekEmergencySwitch(entry.runtime_data, entry), MarstekNightSwitch(entry.runtime_data, entry)])
+    async_add_entities([MarstekManagerEnableSwitch(entry.runtime_data, entry), MarstekEmergencySwitch(entry.runtime_data, entry), MarstekNightSwitch(entry.runtime_data, entry), MarstekChargeLimitSyncSwitch(entry.runtime_data, entry)])
 
 
 class MarstekManagerEnableSwitch(SwitchEntity):
@@ -106,4 +106,36 @@ class MarstekNightSwitch(SwitchEntity):
 
     async def async_turn_off(self, **kwargs) -> None:
         await self.controller.async_set_night_enabled(False)
+        self.async_write_ha_state()
+
+
+class MarstekChargeLimitSyncSwitch(SwitchEntity):
+    """Explicit opt-in to mirror UI charge power to device hardware maximum."""
+
+    _attr_has_entity_name = True
+    _attr_should_poll = False
+    _attr_name = "Auto Ladelimit"
+    _attr_icon = "mdi:battery-sync"
+
+    def __init__(self, controller, entry: ConfigEntry) -> None:
+        self.controller = controller
+        self._attr_unique_id = f"{entry.entry_id}_sync_charge_limit"
+        self._attr_device_info = DeviceInfo(
+            identifiers={(DOMAIN, entry.entry_id)}, name=entry.title,
+            manufacturer="Custom integration", model="Marstek PV rule controller",
+        )
+
+    async def async_added_to_hass(self) -> None:
+        self.async_on_remove(self.controller.subscribe(self.async_write_ha_state))
+
+    @property
+    def is_on(self) -> bool:
+        return self.controller.sync_charge_limit
+
+    async def async_turn_on(self, **kwargs) -> None:
+        await self.controller.async_set_charge_limit_sync(True)
+        self.async_write_ha_state()
+
+    async def async_turn_off(self, **kwargs) -> None:
+        await self.controller.async_set_charge_limit_sync(False)
         self.async_write_ha_state()

@@ -29,6 +29,7 @@ class MarstekController:
         self.entry = entry
         self.enabled = bool(entry.options.get("enabled", False))
         self.emergency_enabled = False  # Never resume grid charge automatically after restart
+        self.sync_charge_limit = bool(entry.options.get("sync_charge_limit", False))
         # Safe migration: existing installations cannot start the new night mode by updating.
         self.night_enabled = bool(entry.options.get("night_enabled", False))
         self._night_active = False
@@ -75,7 +76,14 @@ class MarstekController:
         values["max_discharge_w"] = self.requested_power_limit("max_discharge_w")
         values["emergency_charge_w"] = self.requested_power_limit("emergency_charge_w")
         values["emergency_soc_target"] = self.requested_emergency_soc_target()
-        charge_cap = self._device_max("charge_setpoint")
+        charge_cap = self._device_max("charge_setpoint", "max_charge")
+        # With automatic hardware synchronization disabled, the currently
+        # programmed Modbus hardware cap is an additional hard limit.
+        # Never advertise 2500 W as effective if the device is still at 2000.
+        physical_charge_cap = self._float("max_charge")
+        if not self.sync_charge_limit and physical_charge_cap is not None:
+            charge_cap = (int(physical_charge_cap) if charge_cap is None
+                          else min(charge_cap, int(physical_charge_cap)))
         discharge_cap = self._device_max("discharge_setpoint", "max_discharge")
         if charge_cap is not None:
             values["max_charge_w"] = min(values["max_charge_w"], charge_cap)
@@ -182,6 +190,7 @@ class MarstekController:
     def refresh_options(self) -> None:
         self.enabled = bool(self.entry.options.get("enabled", False))
         self.night_enabled = bool(self.entry.options.get("night_enabled", False))
+        self.sync_charge_limit = bool(self.entry.options.get("sync_charge_limit", False))
         if not self.enabled:
             self.emergency_enabled = False
             self._publish(Decision("disabled", None, None, 0, 0, 0, "disabled"))
@@ -231,6 +240,61 @@ class MarstekController:
         for listener in list(self._listeners):
             listener()
         self.hass.async_create_task(self.async_tick())
+
+    async def async_set_charge_limit_sync(self, enabled: bool) -> None:
+        """Optional, persisted consent to adjust the physical Marstek charge cap."""
+        if enabled:
+            if self._float("max_charge") is None or self._device_max("max_charge") is None:
+                raise HomeAssistantError("Geräte-Ladegrenze ist nicht verfügbar")
+            # No automatic writes during the night owner's operation.
+            if self._night_active or self._boolean("night") is not False:
+                raise HomeAssistantError("Nachtladung hat Vorrang")
+        self.sync_charge_limit = enabled
+        self.hass.config_entries.async_update_entry(
+            self.entry, options={**self.entry.options, "sync_charge_limit": enabled}
+        )
+        for listener in list(self._listeners):
+            listener()
+        if self.enabled:
+            self.hass.async_create_task(self.async_tick())
+
+    def effective_device_charge_limit(self) -> int | None:
+        """Current maximum charge register value, for user diagnostics."""
+        limit = self._float("max_charge")
+        return int(limit) if limit is not None and limit >= 0 else None
+
+    async def _sync_device_charge_limit(self, mode: str) -> bool:
+        """Sync only during an active charge, using verified Modbus bounds.
+
+        Returning False defers a charge-power increase until the limit register
+        has been observed at the expected value. Never overrides night ownership.
+        """
+        if not self.sync_charge_limit:
+            return True
+        if not self._can_write() or mode not in ("charge", "emergency_charge"):
+            return False
+        target = (self.requested_power_limit("emergency_charge_w")
+                  if mode == "emergency_charge" else self.requested_power_limit("max_charge_w"))
+        if target <= 0:
+            return True  # power setpoint=0 already disables charging
+        registered = self.hass.states.get(self.entity("max_charge"))
+        current = self._float("max_charge")
+        if registered is None or current is None:
+            raise HomeAssistantError("Geräte-Ladegrenze nicht verfügbar")
+        try:
+            min_limit = float(registered.attributes["min"])
+            max_limit = float(registered.attributes["max"])
+        except (KeyError, TypeError, ValueError) as exc:
+            raise HomeAssistantError("Geräte-Ladegrenzen unbekannt") from exc
+        if not (math.isfinite(min_limit) and math.isfinite(max_limit)
+                and min_limit <= target <= max_limit):
+            raise HomeAssistantError(
+                f"Gewünschtes Gerätelimit {target} W außerhalb {min_limit}..{max_limit} W"
+            )
+        if abs(current - target) > 1:
+            await self._set_number("max_charge", target)
+        refreshed = self._float("max_charge")
+        return refreshed is not None and abs(refreshed - target) <= 1
 
     def _night_control_valid(self) -> bool:
         return (all(self._raw(k) is not None for k in ("user_mode", "forced_mode"))
@@ -473,10 +537,24 @@ class MarstekController:
             reverse = self._float("discharge_setpoint")
             latest = self._evaluate()
             if reverse is not None and reverse <= 1 and latest.mode in ("charge", "emergency_charge"):
-                # Use the FRESH decision, not the pre-await value: slider may
-                # have been lowered while we were switching modes.
-                await self._set_number("charge_setpoint", latest.charge_w or 0)
-            elif latest.mode == "idle":
+                # Only touch the hardware maximum when the user explicitly
+                # enabled synchronization. Wait for device readback before
+                # increasing the charge power above its old physical cap.
+                # Decrease the requested charge first if the slider was
+                # lowered; a slow/failing hardware register write must never
+                # leave a now-excessive charge setpoint in place.
+                current = self._float("charge_setpoint")
+                if (current is not None and latest.charge_w is not None
+                        and latest.charge_w < current - 1):
+                    await self._set_number("charge_setpoint", latest.charge_w)
+                if not await self._sync_device_charge_limit(latest.mode):
+                    return
+                latest = self._evaluate()
+                if latest.mode in ("charge", "emergency_charge") and self._can_write():
+                    await self._set_number("charge_setpoint", latest.charge_w or 0)
+                elif latest.mode in ("idle", "emergency_hold", "emergency_blocked"):
+                    await self._set_number("charge_setpoint", 0)
+            elif latest.mode in ("idle", "emergency_hold", "emergency_blocked"):
                 await self._set_number("charge_setpoint", 0)
         elif d.mode == "discharge":
             raw = self._float("charge_setpoint")

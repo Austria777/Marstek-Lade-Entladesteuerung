@@ -49,6 +49,7 @@
           "marstek_ac": "Marstek ac",
           "charge_setpoint": "Charge setpoint",
           "discharge_setpoint": "Discharge setpoint",
+          "max_charge": "Marstek hardware maximum charge power",
           "max_discharge": "Max discharge",
           "user_mode": "Marstek user mode",
           "forced_mode": "Marstek forced mode",

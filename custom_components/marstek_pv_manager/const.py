@@ -22,6 +22,7 @@ ENTITY_FIELDS: dict[str, tuple[str, str]] = {
     "charge_setpoint": ("number.marstek_venus_modbus_ladeleistung_einstellen", "number"),
     "discharge_setpoint": ("number.marstek_venus_modbus_entladeleistung_einstellen", "number"),
     "max_discharge": ("number.marstek_venus_modbus_maximale_entladeleistung", "number"),
+    "max_charge": ("number.marstek_venus_modbus_maximale_ladeleistung", "number"),
     "user_mode": ("select.marstek_venus_modbus_benutzer_modus", "select"),
     "forced_mode": ("select.marstek_venus_modbus_erzwungener_modus", "select"),
     "rs485": ("switch.marstek_venus_modbus_rs485_steuermodus", "switch"),
@@ -34,7 +35,7 @@ SOURCE_FIELDS = (
     "heater_4", "heater_5", "heater_6",
 )
 MARSTEK_FIELDS = (
-    "marstek_ac", "marstek_soc", "charge_setpoint", "discharge_setpoint", "max_discharge",
+    "marstek_ac", "marstek_soc", "charge_setpoint", "discharge_setpoint", "max_discharge", "max_charge",
     "user_mode", "forced_mode", "rs485", "night",
 )
 
@@ -62,4 +63,5 @@ DEFAULTS: dict[str, str | int | bool] = {
     **{key: values[0] for key, values in PARAMETERS.items()},
     "enabled": False,
     "night_enabled": False,
+    "sync_charge_limit": False,  # opt-in only, never raise hardware limits on upgrade
 }
