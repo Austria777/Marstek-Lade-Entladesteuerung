@@ -185,9 +185,27 @@ views:
       - type: toggle
       grid_options:
         columns: full
+    - type: custom:mushroom-number-card
+      entity: number.marstek_pv_manager_nachtladung_start_soc
+      name: Nachtladung starten bei SoC
+      icon: mdi:battery-arrow-down-outline
+      icon_color: purple
+      display_mode: slider
+      grid_options:
+        columns: 12
+    - type: custom:mushroom-number-card
+      entity: number.marstek_pv_manager_nachtladung_ziel_soc
+      name: Nachtladung bis SoC
+      icon: mdi:battery-check
+      icon_color: green
+      display_mode: slider
+      grid_options:
+        columns: 12
     - type: custom:mushroom-template-card
       entity: sensor.marstek_pv_manager_nachtladung_status
-      primary: 'Nachtladung: 10 % → 11 %'
+      primary: >-
+        Nachtladung: {{ states('number.marstek_pv_manager_nachtladung_start_soc') }} %
+        → {{ states('number.marstek_pv_manager_nachtladung_ziel_soc') }} %
       secondary: '{{ states(''sensor.marstek_pv_manager_nachtladung_status'') }}'
       icon: mdi:battery-clock-outline
       color: '{{ ''purple'' if is_state(''input_boolean.marstek_10_soc_nachtladung'',''on'') else ''grey''
