@@ -67,6 +67,16 @@ views:
         tap_action:
           action: more-info
           entity: input_boolean.marstek_10_soc_nachtladung
+
+      - type: template
+        icon: mdi:tag-outline
+        icon_color: grey
+        content: >-
+          {% set v = states('sensor.marstek_pv_manager_softwareversion') %}
+          {{ 'Version ' ~ v if v not in ['unknown', 'unavailable'] else 'Version unbekannt' }}
+        tap_action:
+          action: more-info
+          entity: sensor.marstek_pv_manager_softwareversion
     - type: custom:mushroom-template-card
       grid_options:
         columns: 12
