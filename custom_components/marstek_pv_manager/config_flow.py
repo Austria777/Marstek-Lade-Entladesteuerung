@@ -100,6 +100,18 @@ class MarstekOptionsFlow(config_entries.OptionsFlow):
 
     async def async_step_limits(self, user_input: dict[str, Any] | None = None):
         if user_input is not None:
+            start = int(user_input.get("night_start_soc",
+                                       self.config_entry.options.get("night_start_soc",
+                                                                     DEFAULTS["night_start_soc"])))
+            target = int(user_input.get("night_target_soc",
+                                        self.config_entry.options.get("night_target_soc",
+                                                                      DEFAULTS["night_target_soc"])))
+            if start > target:
+                return self.async_show_form(
+                    step_id="limits",
+                    data_schema=_limits_schema({**self.config_entry.options, **user_input}),
+                    errors={"base": "night_soc_order"},
+                )
             return await self._save(user_input)
         return self.async_show_form(
             step_id="limits",
