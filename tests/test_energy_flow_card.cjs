@@ -140,7 +140,9 @@ test("SoC out-of-range is clamped and unavailable stays unknown",()=>{
 });
 test("premium house background and 0W cars remain legible",()=>{
   const c=card();c.hass=hass();
-  assert.match(c.shadowRoot.innerHTML,/class="house-scene"/);
+  assert.match(c.shadowRoot.innerHTML,/class="house-photo"/);
+  assert.match(c.shadowRoot.innerHTML,/filter:blur\(7px\)/);
+  assert.match(c.shadowRoot.innerHTML,/filter:blur\(12px\)/);
   assert.match(c.shadowRoot.innerHTML,/\.node-ev\[data-state='idle'\]\{opacity:\.69/);
   assert.equal(c.shadowRoot._vehicles.get("necharge")[0].dataset.state,"idle");
   assert.equal(c.shadowRoot._vehicles.get("delta")[0].dataset.state,"idle");
@@ -157,13 +159,20 @@ test("all battery cards use sample-inspired device-left and SoC-bottom layout",(
   assert.match(markup,/SolaX Battery/);
   assert.doesNotMatch(markup,/class="soc-row"/);
 });
-test("background is crisp house-only SVG, no baked live readings",()=>{
+test("Variant B uses a realistic external house photo, adaptive blur and real data overlays",()=>{
   const c=card(),markup=c.shadowRoot.innerHTML;
-  const start=markup.indexOf('<svg class="house-scene"');
-  assert.ok(start>=0);
-  const end=markup.indexOf('</svg>',start);
-  const scene=markup.slice(start,end);
-  assert.match(scene,/scene-panels/);
-  assert.doesNotMatch(scene,/\d+ W|Marstek Battery|SolaX Battery|NeCharge|Delta/);
-  assert.doesNotMatch(scene,/tesla-model|marstek-energy-premium-background/);
+  assert.match(markup,/class="house-photo"/);
+  assert.match(markup,/images\.unsplash\.com\/photo-1757356657991-c3fd6e2e812e/);
+  assert.match(markup,/\.house-photo\{[^}]*filter:blur\(7px\)/s);
+  assert.match(markup,/@media\(max-width:620px\)\{/);
+  assert.match(markup,/\.house-photo\{filter:blur\(12px\)/);
+  assert.doesNotMatch(markup,/class="house-scene"/);
+  assert.doesNotMatch(markup,/marstek-energy-premium-background\.webp/);
+  assert.match(markup,/Marstek Battery/);
+  assert.match(markup,/SolaX Battery/);
+  assert.match(markup,/NeCharge/);
+  assert.match(markup,/Delta/);
+  c.hass=hass("1100","1.2");
+  assert.equal(numberOfWatts(c,"delta"),1200);
+  assert.equal(numberOfWatts(c,"house"),4500);
 });
