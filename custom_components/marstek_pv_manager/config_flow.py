@@ -106,7 +106,7 @@ class MarstekOptionsFlow(config_entries.OptionsFlow):
             target = int(user_input.get("night_target_soc",
                                         self.config_entry.options.get("night_target_soc",
                                                                       DEFAULTS["night_target_soc"])))
-            if start > target:
+            if start >= target:
                 return self.async_show_form(
                     step_id="limits",
                     data_schema=_limits_schema({**self.config_entry.options, **user_input}),
