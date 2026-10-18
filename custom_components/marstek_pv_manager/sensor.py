@@ -22,6 +22,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
         MarstekManagerSensor(controller, entry, "effective_charge", "Wirksames Ladelimit"),
         MarstekManagerSensor(controller, entry, "effective_discharge", "Wirksames Entladelimit"),
         MarstekManagerSensor(controller, entry, "effective_emergency", "Wirksame Notfall Ladeleistung"),
+        MarstekManagerSensor(controller, entry, "device_max_charge", "Hardware Ladelimit"),
         MarstekManagerSensor(controller, entry, "emergency_status", "Notfall Status"),
         MarstekManagerSensor(controller, entry, "marstek_soc", "Marstek Ladezustand"),
         MarstekManagerSensor(controller, entry, "night_status", "Nachtladung Status"),
@@ -44,7 +45,7 @@ class MarstekManagerSensor(SensorEntity):
             model="Marstek PV rule controller",
         )
         if key in ("charge_target_w", "discharge_target_w", "pv_total_w",
-                   "effective_charge", "effective_discharge", "effective_emergency"):
+                   "effective_charge", "effective_discharge", "effective_emergency", "device_max_charge"):
             self._attr_device_class = SensorDeviceClass.POWER
             self._attr_native_unit_of_measurement = UnitOfPower.WATT
         elif key == "marstek_soc":
@@ -83,6 +84,8 @@ class MarstekManagerSensor(SensorEntity):
         if self.key == "discharge_lock":
             from .logic import discharge_lock_reason
             return discharge_lock_reason(self.controller._inputs(), self.controller.settings(), self.controller.enabled, self.controller.emergency_enabled)
+        if self.key == "device_max_charge":
+            return self.controller.effective_device_charge_limit()
         if self.key == "effective_charge":
             return self.controller.settings().max_charge_w
         if self.key == "effective_discharge":
