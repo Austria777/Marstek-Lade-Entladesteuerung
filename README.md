@@ -1,3 +1,30 @@
+# Marstek Energy Studio v0.5.5 – Energiefluss mit zwei Tesla-Ladepunkten
+
+**Neu:** Der Energiefluss zeigt NeCharge und Delta Wallbox als zwei immer
+sichtbare Verbraucher mit animierter Verbindung zum Haus. Bei 0 W sind
+beide Fahrzeug-Knoten deutlich gedimmt; ab einer aktiven Ladeleistung
+werden sie wieder hervorgehoben. Für die Bilder wurden die bestätigten
+Tesla-Darstellungen verwendet: **NeCharge = Model 3 Highland, Stealth Grey**;
+**Delta = Model Y Juniper, Stealth Grey**.
+
+- NeCharge: `sensor.necharge_ladeleistung` (**W**)
+- Delta: `sensor.evcc_delta_ac_smart_wallbox_charge_power` (**kW** wird in W umgerechnet; vorhandenes Einheit-Attribut wird berücksichtigt)
+- Wenn ein Sensor nicht verfügbar ist, bleibt sein Knoten sichtbar, aber gedimmt und zeigt **– W / Nicht verfügbar**.
+- Die Speicherknoten heißen nun **Marstek Battery** und **SolaX Battery**.
+- Die Hausbilanz bleibt **unverändert**: Ladeleistungen der Fahrzeuge sind bereits Teil des gesamten Hausverbrauchs und werden **nicht doppelt abgezogen**.
+- Die Desktop- und Smartphone-Layouts wurden beide angepasst; nur die Darstellung ändert sich, **keine Lade-/Entladesteuerung**.
+
+**Installation (erforderlich):** HACS auf v0.5.5 aktualisieren und Home Assistant
+neu starten. Aus dem Repository die drei Dateien `www/marstek-energy-flow-card.js`,
+`www/tesla-model3-highland-stealth-grey.webp` und
+`www/tesla-modely-juniper-stealth-grey.webp` nach `/config/www/` kopieren.
+Danach in Home Assistant die Lovelace-JavaScript-Ressource von z. B.
+`/local/marstek-energy-flow-card.js?v=042` auf
+`/local/marstek-energy-flow-card.js?v=055` ändern oder den Browser-Cache
+vollständig aktualisieren. Außerdem `dashboard.yaml` oder
+`dashboard-view.yaml` aus dem GitHub-Repository neu übernehmen.
+Die beiden Bilddateien müssen über `/local/` erreichbar sein.
+
 # Marstek Energy Studio v0.5.4 – Nachtlade-Grenzwerte korrigiert
 
 **Neu in v0.5.4:** Einstellbare **Startgrenze 9–50 %** und **Zielgrenze
