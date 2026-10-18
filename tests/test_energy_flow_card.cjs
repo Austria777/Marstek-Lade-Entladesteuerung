@@ -14,7 +14,8 @@ class StubElement {
     const items=(map,k)=>{
       if(!map.has(k)) map.set(k,Array.from({length:2},()=>({
         textContent:"",dataset:{},attributes:{},
-        setAttribute(name,value){this.attributes[name]=value;}
+        setAttribute(name,value){this.attributes[name]=value;},
+        getAttribute(name){return this.attributes[name]??(name==='data-full-width'?'100':null);}
       })));
       return map.get(k);
     };
@@ -126,21 +127,43 @@ test("in-card SoC in both responsive SVGs; no outdated footer SoC",()=>{
   c.hass=hass();
   assert.equal(c.shadowRoot._soc.get("marstek_soc")[0].textContent,"SoC 80 %");
   assert.equal(c.shadowRoot._soc.get("solax_soc")[0].textContent,"SoC 100 %");
-  assert.equal(Number(c.shadowRoot._socBars.get("marstek_soc")[0].attributes.width),72);
-  assert.equal(Number(c.shadowRoot._socBars.get("solax_soc")[0].attributes.width),80);
+  assert.equal(Number(c.shadowRoot._socBars.get("marstek_soc")[0].attributes.width),80);
+  assert.equal(Number(c.shadowRoot._socBars.get("solax_soc")[0].attributes.width),100);
 });
 test("SoC out-of-range is clamped and unavailable stays unknown",()=>{
   const c=card(),h=hass();h.states["sensor.marstek_soc"].state="160";
   h.states["sensor.solax_soc"].state="unknown";c.hass=h;
   assert.equal(c.shadowRoot._soc.get("marstek_soc")[0].textContent,"SoC 160 %");
-  assert.equal(Number(c.shadowRoot._socBars.get("marstek_soc")[0].attributes.width),90);
+  assert.equal(Number(c.shadowRoot._socBars.get("marstek_soc")[0].attributes.width),100);
   assert.equal(c.shadowRoot._soc.get("solax_soc")[0].textContent,"SoC –");
   assert.equal(Number(c.shadowRoot._socBars.get("solax_soc")[0].attributes.width),0);
 });
 test("premium house background and 0W cars remain legible",()=>{
   const c=card();c.hass=hass();
-  assert.match(c.shadowRoot.innerHTML,/marstek-energy-premium-background\.webp/);
+  assert.match(c.shadowRoot.innerHTML,/class="house-scene"/);
   assert.match(c.shadowRoot.innerHTML,/\.node-ev\[data-state='idle'\]\{opacity:\.69/);
   assert.equal(c.shadowRoot._vehicles.get("necharge")[0].dataset.state,"idle");
   assert.equal(c.shadowRoot._vehicles.get("delta")[0].dataset.state,"idle");
+});
+
+test("all battery cards use sample-inspired device-left and SoC-bottom layout",()=>{
+  const c=card(),markup=c.shadowRoot.innerHTML;
+  assert.equal((markup.match(/class="battery-art battery-art-marstek"/g)||[]).length,2);
+  assert.equal((markup.match(/class="battery-art battery-art-solax"/g)||[]).length,2);
+  assert.equal((markup.match(/class="battery-heading"/g)||[]).length,4);
+  assert.equal((markup.match(/class="node-power battery-power"/g)||[]).length,4);
+  assert.equal((markup.match(/class="soc-track"/g)||[]).length,4);
+  assert.match(markup,/Marstek Battery/);
+  assert.match(markup,/SolaX Battery/);
+  assert.doesNotMatch(markup,/class="soc-row"/);
+});
+test("background is crisp house-only SVG, no baked live readings",()=>{
+  const c=card(),markup=c.shadowRoot.innerHTML;
+  const start=markup.indexOf('<svg class="house-scene"');
+  assert.ok(start>=0);
+  const end=markup.indexOf('</svg>',start);
+  const scene=markup.slice(start,end);
+  assert.match(scene,/scene-panels/);
+  assert.doesNotMatch(scene,/\d+ W|Marstek Battery|SolaX Battery|NeCharge|Delta/);
+  assert.doesNotMatch(scene,/tesla-model|marstek-energy-premium-background/);
 });
