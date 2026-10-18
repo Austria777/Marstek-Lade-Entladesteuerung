@@ -1,18 +1,35 @@
-# Marstek Energy Studio v0.5.3 – konfigurierbare Mindest-SoC-Nachtladung
+# Marstek Energy Studio v0.5.4 – Nachtlade-Grenzwerte korrigiert
+
+**Neu in v0.5.4:** Einstellbare **Startgrenze 9–50 %** und **Zielgrenze
+10–100 %**. Der Zielwert muss mindestens 1 Prozentpunkt höher als der
+Startwert liegen. Beispiel: Start 20 %, Ziel 80 %; Ladung weiterhin 400 W,
+ausschließlich zwischen 00:00 und 06:00 Uhr. Um 06:00 Uhr wird sie
+gestoppt, auch wenn das Ziel noch nicht erreicht ist.
+
+Die Standardeinstellungen **9 % Start (9,x %-Bereich) und 11 % Ziel**
+entsprechen dem bisherigen Verhalten. Beide Werte sind im Dashboard
+änderbar und bleiben nach Home-Assistant-Neustarts gespeichert.
+Für höhere Startwerte zuerst den Zielwert erhöhen.
+
+**Update:** In HACS v0.5.4 installieren, HA neu starten, bei Bedarf
+die aktuelle Dashboard-YAML erneut übernehmen. Die zwei Slider wurden
+bereits in v0.5.3 hinzugefügt; diese Version korrigiert ihre Grenzen,
+die Plausibilitätsprüfung und die Tests.
+
+# Marstek Energy Studio v0.5.3 – ursprüngliche Einführung der Nachtlade-Regler
 
 **Neu in v0.5.3:** Zwei unabhängige Dashboard-Regler für die integrierte
 Mindest-SoC-Nachtladung:
 
-- `number.marstek_pv_manager_nachtladung_start_soc`: **Start-SoC 9–100 %**, Standard **9 %**.
+- `number.marstek_pv_manager_nachtladung_start_soc`: **Start-SoC ursprünglich 9–100 %, ab v0.5.4 auf 9–50 % korrigiert**, Standard **9 %**.
   Der Marstek beginnt, sobald er in den eingestellten angezeigten Prozentbereich
   fällt (z. B. 9,x % bei Einstellung 9). Dies entspricht dem bisherigen Start
   bei unter 10 %.
 - `number.marstek_pv_manager_nachtladung_ziel_soc`: **Ziel-SoC 10–100 %**, Standard **11 %**.
   Eine laufende Nachtladung endet bei Erreichen des Ziel-SoC.
 
-Bei der Eingabe gilt: **Start-SoC darf nicht höher als Ziel-SoC sein**.
-Bei Start = Ziel gibt es keine Hysterese; für eine stabile Reserve empfiehlt
-sich mindestens 1 Prozentpunkt Abstand. Zuerst ggf. den Zielwert erhöhen,
+Ab v0.5.4 gilt bei der Eingabe: **Ziel-SoC muss höher als Start-SoC sein**.
+Damit bleibt mindestens 1 Prozentpunkt Hysterese erhalten. Zuerst ggf. den Zielwert erhöhen,
 dann den Startwert. Die Zahlen werden in den Integrationsoptionen gespeichert
 und bleiben über Home-Assistant-Neustarts erhalten.
 

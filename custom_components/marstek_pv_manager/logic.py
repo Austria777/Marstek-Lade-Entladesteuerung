@@ -226,8 +226,8 @@ def evaluate_night(*, enabled: bool, active: bool, guard: bool | None,
     behavior (start below 10%). Never start if the target is already reached.
     """
     window = 0 <= hour < 6
-    valid_levels = (9 <= start_soc <= 100 and 10 <= target_soc <= 100
-                    and start_soc <= target_soc)
+    valid_levels = (9 <= start_soc <= 50 and 10 <= target_soc <= 100
+                    and start_soc < target_soc)
     if active:
         if not enabled or not window:
             return NightPlan("stop", "night_window_ended")

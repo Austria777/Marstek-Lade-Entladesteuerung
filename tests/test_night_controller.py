@@ -270,13 +270,24 @@ class ConfigurableNightControllerTests(unittest.IsolatedAsyncioTestCase):
         with self.assertRaises(Exception):
             await c.async_set_power_limit("night_target_soc", 9)
 
-    async def test_100_percent_goal_allowed(self):
+    async def test_100_percent_goal_allowed_with_50_percent_start(self):
         hass, c = setup(soc=50)
         await c.async_set_power_limit("night_target_soc", 100)
-        await c.async_set_power_limit("night_start_soc", 100)
+        await c.async_set_power_limit("night_start_soc", 50)
         await c.async_tick()
         self.assertEqual(c.decision.mode, "night_charge")
-        self.assertEqual(c.night_levels(), (100, 100))
+        self.assertEqual(c.night_levels(), (50, 100))
+
+    async def test_reject_51_percent_start_and_equal_levels(self):
+        hass, c = setup(soc=49)
+        await c.async_set_power_limit("night_target_soc", 100)
+        with self.assertRaises(Exception):
+            await c.async_set_power_limit("night_start_soc", 51)
+        self.assertNotIn("night_start_soc", c.entry.options)
+        await c.async_set_power_limit("night_start_soc", 50)
+        with self.assertRaises(Exception):
+            await c.async_set_power_limit("night_target_soc", 50)
+        self.assertEqual(c.night_levels(), (50, 100))
 
     async def test_restart_resume_with_configured_target(self):
         hass, c = setup(soc=9.3)
@@ -296,7 +307,7 @@ class ConfigurableNightControllerTests(unittest.IsolatedAsyncioTestCase):
         c.entry.options["night_target_soc"] = 70
         await c.async_tick()
         hass._states[const.ENTITY_FIELDS["marstek_soc"][0]].state = "50"
-        await c.async_set_power_limit("night_start_soc", 60)
+        await c.async_set_power_limit("night_start_soc", 49)
         await c.async_tick()
         self.assertTrue(c._night_active)
         self.assertEqual(hass._states[const.ENTITY_FIELDS["charge_setpoint"][0]].state, "400")

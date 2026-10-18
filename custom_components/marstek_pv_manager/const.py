@@ -45,7 +45,7 @@ PARAMETERS: dict[str, tuple[int, int, int]] = {
     "max_discharge_w": (1800, 0, 2500),
     "emergency_charge_w": (500, 0, 2500),
     "emergency_soc_target": (90, 50, 100),
-    "night_start_soc": (9, 9, 100),  # 9 means the 9.x% band, as before
+    "night_start_soc": (9, 9, 50),  # 9 means the 9.x% band, as before
     "night_target_soc": (11, 10, 100),
     "step_w": (100, 1, 1000),
     "export_reserve_w": (100, 0, 2000),
