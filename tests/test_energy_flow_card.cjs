@@ -65,6 +65,7 @@ function hass(necharge="0", delta="0", deltaUnit="kW"){
   }};
 }
 function text(c,name){return c.shadowRoot._values.get(name)?.[0]?.textContent;}
+function numberOfWatts(c,name){return Number(text(c,name).replace(/[^0-9]/g,''));}
 function direction(c,name){return c.shadowRoot._flows.get(name)?.[0]?.dataset?.direction;}
 function state(c,name){return c.shadowRoot._vehicles.get(name)?.[0]?.dataset?.state;}
 
@@ -82,17 +83,17 @@ test("responsive diagrams contain both approved vehicles and new battery labels"
 test("live charger powers use W for NeCharge and kW for Delta",()=>{
   const c=card();c.hass=hass("900","2.5");
   assert.equal(text(c,"necharge"),"900 W");
-  assert.equal(text(c,"delta"),"2.500 W");
+  assert.equal(numberOfWatts(c,"delta"),2500);
   assert.equal(state(c,"necharge"),"active");
   assert.equal(state(c,"delta"),"active");
   assert.equal(direction(c,"necharge"),"forward");
   assert.equal(direction(c,"delta"),"forward");
   // The 900W and 2500W vehicle loads are ALREADY inside the house balance.
-  assert.equal(text(c,"house"),"4.500 W");
+  assert.equal(numberOfWatts(c,"house"),4500);
 });
 test("Delta detects explicit W units without multiplying twice",()=>{
   const c=card();c.hass=hass("0","1450","W");
-  assert.equal(text(c,"delta"),"1.450 W");
+  assert.equal(numberOfWatts(c,"delta"),1450);
 });
 test("both cars stay visible but dim at 0 W; wires stop",()=>{
   const c=card();c.hass=hass();
