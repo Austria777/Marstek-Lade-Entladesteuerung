@@ -1,3 +1,47 @@
+# Marstek Energy Studio v0.5.7 – Batteriekarten nach Muster + scharfes Haus
+
+**Neu:** Die beiden Batteriekarten sind im Stil des bereitgestellten
+Musterbilds aufgebaut. Links steht eine klar gezeichnete Geräteabbildung
+(Marstek dunkelblau bzw. SolaX weiß), rechts Name, aktuelle Leistung
+und Lade-/Entladestatus. **Unten** stehen ein farbiger SoC-Balken und
+der aktuelle Prozentwert. Dies gilt für Desktop und Smartphone.
+Alle Werte stammen aus den bisherigen Home-Assistant-Sensoren;
+der SoC wird nicht doppelt am Kartenrand angezeigt.
+
+**Scharfer Hintergrund:** Die Live-Flow-Karte zeichnet eine skalierbare
+Haus-Szene mit PV-Dach und beleuchteten Fensterfronten als **inline SVG**.
+Keine Autos, Wattzahlen, Batteriekarten oder andere Dashboard-Elemente
+sind im Hintergrund eingebrannt. Damit wird der bisher stark verschwommene
+Hintergrund ersetzt. Das neue Motiv ist eine *klare stilisierte Illustration*,
+keine Fotografie. Die einzelnen Echtzeit-Karten und Energiepfade werden
+darüber gerendert, wie bisher. Bei Bedarf kann später die Deckkraft oder
+Weichzeichnung fein eingestellt werden.
+
+Auch die Tesla-Knoten sind verbessert: Autos links, Leistung und Status
+rechts, sodass es keine Überlagerung von Messwerten mehr gibt. Es werden
+weiterhin die vorhandenen Model-3-Highland- und Model-Y-Juniper-Bilder
+aus `/config/www/` verwendet.
+
+**Unverändert:** Sämtliche Marstek-Lade- und Entladeautomationen,
+Nachtladungslogik, Notfall-Netzladung, Messsensoren und Hausbilanz.
+
+**Update:**
+
+1. HACS: auf **v0.5.7** aktualisieren und Home Assistant neu starten.
+2. Die Datei `www/marstek-energy-flow-card.js` aus diesem Repository in
+   Home Assistants Ordner `/config/www/` kopieren (bisherige Datei ersetzen).
+3. Unter *Einstellungen → Dashboards → Ressourcen* die vorhandene URL auf
+   `/local/marstek-energy-flow-card.js?v=057` ändern (JavaScript-Modul).
+4. Home Assistant im Browser mit **Strg+F5** hart neu laden bzw.
+   ältere HA-Tabs schließen. Die bisherige Dashboard-YAML bleibt gültig.
+5. Die vorhandenen zwei Tesla-WebP-Dateien im `www`-Ordner belassen.
+   **Das alte unscharfe Premium-Hintergrundbild wird nicht mehr benötigt**;
+   die Hausillustration ist vollständig in der JS-Datei enthalten.
+
+**Hinweis:** Zur optischen Beurteilung bitte nach dem Update einen Screenshot
+auf PC und Smartphone anfertigen. Die SVG-Szene ist absichtlich scharf;
+bei Bedarf kann ein moderater Blur später ergänzt werden.
+
 # Marstek Energy Studio v0.5.6 – Premium Smart Energy (Glass-Design)
 
 **Neue Darstellung der vorhandenen Custom-Card**, basierend auf der gemeinsam
