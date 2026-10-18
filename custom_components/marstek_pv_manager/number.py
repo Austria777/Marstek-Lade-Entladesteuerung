@@ -16,6 +16,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
         MarstekPowerLimit(entry.runtime_data, entry, "max_discharge_w", "Maximale Entladeleistung"),
         MarstekPowerLimit(entry.runtime_data, entry, "emergency_charge_w", "Notfall Ladeleistung"),
         MarstekPowerLimit(entry.runtime_data, entry, "emergency_soc_target", "Notfall Ziel SoC"),
+        MarstekPowerLimit(entry.runtime_data, entry, "night_start_soc", "Nachtladung Start-SoC"),
+        MarstekPowerLimit(entry.runtime_data, entry, "night_target_soc", "Nachtladung Ziel-SoC"),
     ])
 
 
@@ -43,6 +45,14 @@ class MarstekPowerLimit(NumberEntity):
             self._attr_native_max_value = 100
             self._attr_native_step = 1
             self._attr_icon = "mdi:battery-check"
+        elif key in ("night_start_soc", "night_target_soc"):
+            self._attr_device_class = None
+            self._attr_native_unit_of_measurement = "%"
+            self._attr_native_min_value = 9 if key == "night_start_soc" else 10
+            self._attr_native_max_value = 100
+            self._attr_native_step = 1
+            self._attr_icon = ("mdi:battery-arrow-down-outline"
+                               if key == "night_start_soc" else "mdi:battery-check")
         elif key == "emergency_charge_w":
             self._attr_icon = "mdi:transmission-tower-import"
         self._attr_unique_id = f"{entry.entry_id}_{key}"
@@ -55,7 +65,13 @@ class MarstekPowerLimit(NumberEntity):
 
     @property
     def native_value(self) -> float:
-        return self.controller.requested_power_limit(self.key) if self.key != "emergency_soc_target" else self.controller.requested_emergency_soc_target()
+        if self.key == "emergency_soc_target":
+            return self.controller.requested_emergency_soc_target()
+        if self.key == "night_start_soc":
+            return self.controller.night_levels()[0]
+        if self.key == "night_target_soc":
+            return self.controller.night_levels()[1]
+        return self.controller.requested_power_limit(self.key)
 
     async def async_added_to_hass(self) -> None:
         self.async_on_remove(self.controller.subscribe(self.async_write_ha_state))
