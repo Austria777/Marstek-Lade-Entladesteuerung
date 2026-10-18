@@ -132,16 +132,17 @@ class MarstekController:
                 raise ValueError("Emergency target SoC must be 50..100%")
         elif key in ("night_start_soc", "night_target_soc"):
             lower = 9 if key == "night_start_soc" else 10
-            if value < lower or value > 100:
-                raise HomeAssistantError(f"{key}: erlaubter Bereich {lower}–100 %")
+            upper = 50 if key == "night_start_soc" else 100
+            if value < lower or value > upper:
+                raise HomeAssistantError(f"{key}: erlaubter Bereich {lower}–{upper} %")
             start, target = self.night_levels()
             if key == "night_start_soc":
                 start = value
             else:
                 target = value
-            if start > target:
+            if start >= target:
                 raise HomeAssistantError(
-                    "Nachtladung: Start-SoC darf nicht über dem Ziel-SoC liegen. "
+                    "Nachtladung: Ziel-SoC muss höher als Start-SoC sein. "
                     "Bitte zuerst den Zielwert erhöhen oder den Startwert senken."
                 )
         elif key in ("max_charge_w", "max_discharge_w", "emergency_charge_w"):
@@ -428,6 +429,8 @@ class MarstekController:
                 and not self._night_active and guard is False
                 and 0 <= hour < 6 and soc is not None
                 and 0 <= soc < self.night_levels()[1]
+                and 9 <= self.night_levels()[0] <= 50
+                and self.night_levels()[0] < self.night_levels()[1] <= 100
                 and self._night_control_valid()):
             plan = NightPlan("start", "night_restart_resume")
         if self._night_resume_pending and (not self.night_enabled or not 0 <= hour < 6
