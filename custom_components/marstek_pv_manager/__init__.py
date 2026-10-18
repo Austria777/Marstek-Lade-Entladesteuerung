@@ -96,6 +96,16 @@ class MarstekController:
         return max(50, min(100, int(self.entry.options.get(
             "emergency_soc_target", DEFAULTS["emergency_soc_target"]))))
 
+    def night_levels(self) -> tuple[int, int]:
+        """Persisted integer SoC thresholds: start at the displayed percent."""
+        start = int(self.entry.options.get("night_start_soc", DEFAULTS["night_start_soc"]))
+        target = int(self.entry.options.get("night_target_soc", DEFAULTS["night_target_soc"]))
+        return start, target
+
+    def night_start_boundary(self) -> int:
+        start, target = self.night_levels()
+        return min(start + 1, target)
+
     async def async_set_emergency(self, enabled: bool) -> None:
         """Single controller owns both normal and emergency control paths."""
         if enabled:
@@ -105,7 +115,7 @@ class MarstekController:
                 raise HomeAssistantError("10%-Nachtladung aktiv/Status unbekannt; keine Übernahme")
             soc = self._float("marstek_soc")
             if (self.night_enabled and 0 <= dt_util.now().hour < 6
-                    and soc is not None and soc < 10):
+                    and soc is not None and soc < self.night_start_boundary()):
                 raise HomeAssistantError("Mindest-SoC-Nachtladung hat Vorrang")
             if self._float("marstek_soc") is None:
                 raise HomeAssistantError("Marstek-SoC fehlt; Netzladung wird nicht gestartet")
@@ -120,6 +130,20 @@ class MarstekController:
         if key == "emergency_soc_target":
             if value < 50 or value > 100:
                 raise ValueError("Emergency target SoC must be 50..100%")
+        elif key in ("night_start_soc", "night_target_soc"):
+            lower = 9 if key == "night_start_soc" else 10
+            if value < lower or value > 100:
+                raise HomeAssistantError(f"{key}: erlaubter Bereich {lower}–100 %")
+            start, target = self.night_levels()
+            if key == "night_start_soc":
+                start = value
+            else:
+                target = value
+            if start > target:
+                raise HomeAssistantError(
+                    "Nachtladung: Start-SoC darf nicht über dem Ziel-SoC liegen. "
+                    "Bitte zuerst den Zielwert erhöhen oder den Startwert senken."
+                )
         elif key in ("max_charge_w", "max_discharge_w", "emergency_charge_w"):
             if value < 0 or value > 2500 or value % 100:
                 raise ValueError("Power limit must be 0..2500 W in 100-W steps")
@@ -345,8 +369,9 @@ class MarstekController:
             await self._night_call("switch", "turn_on", self.entity("rs485"))
         # After awaits, re-evaluate the SoC and time boundary before charging.
         soc = self._float("marstek_soc")
+        _, target_soc = self.night_levels()
         if (not self.night_enabled or not 0 <= dt_util.now().hour < 6
-                or soc is None or not 0 <= soc < 11):
+                or soc is None or not 0 <= soc < target_soc):
             await self._stop_night("Nachtladung beendet")
             return
         await self._night_number("charge_setpoint", 400)
@@ -395,16 +420,18 @@ class MarstekController:
             enabled=self.night_enabled, active=self._night_active,
             guard=guard, soc=soc, hour=hour,
             control_valid=self._night_control_valid(),
+            start_soc=self.night_levels()[0], target_soc=self.night_levels()[1],
         )
         # A clean HA restart intentionally clears the output, but remembers a
-        # running 10->11% charge so it can resume at 10.x%, not only below 10%.
+        # running charge so it can resume below the configured target, even above start.
         if (self._night_resume_pending and self.night_enabled
                 and not self._night_active and guard is False
-                and 0 <= hour < 6 and soc is not None and 0 <= soc < 11
+                and 0 <= hour < 6 and soc is not None
+                and 0 <= soc < self.night_levels()[1]
                 and self._night_control_valid()):
             plan = NightPlan("start", "night_restart_resume")
         if self._night_resume_pending and (not self.night_enabled or not 0 <= hour < 6
-                                           or (soc is not None and soc >= 11)):
+                                           or (soc is not None and soc >= self.night_levels()[1])):
             self._night_resume_pending = False
             self.hass.config_entries.async_update_entry(
                 self.entry, options={**self.entry.options, "night_resume_pending": False}
@@ -432,10 +459,11 @@ class MarstekController:
                 enabled=True, active=True, guard=self._boolean("night"),
                 soc=self._float("marstek_soc"), hour=dt_util.now().hour,
                 control_valid=self._night_control_valid(),
+                start_soc=self.night_levels()[0], target_soc=self.night_levels()[1],
             )
         if plan.action in ("charge", "stop", "invalid"):
             if plan.action == "charge":
-                self.night_status = "Lädt mit 400 W bis 11 %"
+                self.night_status = f"Lädt mit 400 W bis {self.night_levels()[1]} %"
                 self._publish(Decision("night_charge", 400, 0, 400, 0, 0,
                                        "night_reserve_charge"))
                 await self._night_apply_charge()
@@ -443,7 +471,7 @@ class MarstekController:
                 if plan.action == "invalid":
                     self.night_status = "Messwerte fehlen – Ladeleistung wird gestoppt"
                 await self._stop_night(
-                    "11 % erreicht / Nachtfenster beendet" if plan.action == "stop"
+                    f"{self.night_levels()[1]} % erreicht / Nachtfenster beendet" if plan.action == "stop"
                     else "Messwerte fehlen – Nachtladung beendet"
                 )
                 self._publish(Decision("night", None, None, 0, 0, 0, plan.reason))
@@ -457,8 +485,11 @@ class MarstekController:
             self._publish(Decision("night", None, None, 0, 0, 0, plan.reason))
             return True
         if self.night_enabled:
-            self.night_status = ("Bereit von 00:00 bis 06:00 Uhr"
-                                 if plan.action == "wait" else "Deaktiviert")
+            self.night_status = (
+                f"Bereit 00:00–06:00 · Start {self.night_levels()[0]} %, "
+                f"Ziel {self.night_levels()[1]} %"
+                if plan.action == "wait" else "Deaktiviert"
+            )
         return False
 
     def _can_write(self) -> bool:
@@ -644,7 +675,7 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             _LOGGER.error("Nachtladung konnte nicht sicher gestoppt werden: %s", exc)
             return False
         # Store just the prior active-latch, not the output power. Restart is
-        # permitted only inside the 00:00-06:00 window and below 11%.
+        # permitted only inside the 00:00-06:00 window and below the configured target.
         controller.hass.config_entries.async_update_entry(
             entry, options={**entry.options, "night_resume_pending": True}
         )

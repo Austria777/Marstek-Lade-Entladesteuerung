@@ -75,9 +75,14 @@
           "solax_charge_soc": "SolaX-SoC zum Laden (%)",
           "solax_discharge_soc": "SolaX-SoC zum Entladen (%)",
           "emergency_charge_w": "Notfall-Netzladeleistung (W)",
-          "emergency_soc_target": "Notfall-Ziel-SoC (%)"
+          "emergency_soc_target": "Notfall-Ziel-SoC (%)",
+          "night_start_soc": "Nachtladung starten bei angezeigtem SoC (%)",
+          "night_target_soc": "Nachtladung beenden bei Ziel-SoC (%)"
         }
       }
+    },
+    "error": {
+      "night_soc_order": "Der Start-SoC darf nicht größer als der Ziel-SoC sein."
     }
   }
 }

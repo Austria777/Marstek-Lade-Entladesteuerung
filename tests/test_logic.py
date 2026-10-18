@@ -306,3 +306,50 @@ class IntegratedNightReserveTests(unittest.TestCase):
     def test_active_night_ignores_main_manager_switch(self):
         # The separate night-enabled flag, not main enabled, drives charging.
         self.assertEqual(self.plan(enabled=True, active=True, guard=True).action, "charge")
+
+
+class ConfigurableNightThresholdTests(unittest.TestCase):
+    """Start threshold is an integer displayed SoC band; target is exact."""
+
+    def plan(self, *, start=9, target=11, soc=9.5, active=False, guard=False, hour=2):
+        return module.evaluate_night(
+            enabled=True, active=active, guard=guard,
+            control_valid=True, soc=soc, hour=hour,
+            start_soc=start, target_soc=target,
+        )
+
+    def test_preserve_legacy_defaults_for_9_point_x(self):
+        self.assertEqual(self.plan(soc=9.99).action, "start")
+        self.assertEqual(self.plan(soc=10.0).action, "wait")
+
+    def test_user_sets_30_to_80(self):
+        self.assertEqual(self.plan(start=30, target=80, soc=30.75).action, "start")
+        self.assertEqual(self.plan(start=30, target=80, soc=31).action, "wait")
+        self.assertEqual(self.plan(start=30, target=80, soc=79, active=True, guard=True).action,
+                         "charge")
+        self.assertEqual(self.plan(start=30, target=80, soc=80, active=True, guard=True).action,
+                         "stop")
+
+    def test_9_to_10_is_valid_and_no_premature_stop(self):
+        self.assertEqual(self.plan(start=9, target=10, soc=9.9).action, "start")
+        self.assertEqual(self.plan(start=9, target=10, soc=9.9, active=True, guard=True).action,
+                         "charge")
+        self.assertEqual(self.plan(start=9, target=10, soc=10, active=True, guard=True).action,
+                         "stop")
+
+    def test_equal_100_100_is_valid_without_hysteresis(self):
+        self.assertEqual(self.plan(start=100, target=100, soc=99.9).action, "start")
+        self.assertEqual(self.plan(start=100, target=100, soc=100).action, "wait")
+        self.assertEqual(self.plan(start=100, target=100, soc=100, active=True, guard=True).action,
+                         "stop")
+
+    def test_invalid_order_never_starts_and_aborts_active(self):
+        self.assertEqual(self.plan(start=90, target=80).action, "wait")
+        self.assertEqual(self.plan(start=90, target=80, active=True, guard=True).action, "invalid")
+
+    def test_missing_soc_at_high_target_stops(self):
+        self.assertEqual(self.plan(start=60, target=80, soc=None, active=True, guard=True).action,
+                         "invalid")
+
+    def test_daytime_never_starts_even_with_high_target(self):
+        self.assertEqual(self.plan(start=80, target=90, soc=50, hour=12).action, "wait")

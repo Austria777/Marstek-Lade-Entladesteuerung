@@ -228,3 +228,75 @@ class NightControllerTests(unittest.IsolatedAsyncioTestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class ConfigurableNightControllerTests(unittest.IsolatedAsyncioTestCase):
+    async def asyncSetUp(self):
+        self.clock = patch.object(module.dt_util, "now", lambda: datetime(2026, 10, 18, 2, 0))
+        self.clock.start()
+        self.addCleanup(self.clock.stop)
+
+    async def test_edit_levels_while_idle_then_start_at_40_percent(self):
+        hass, c = setup(soc=39.5)
+        c.entry.options["night_enabled"] = True
+        # Target must be raised before the start slider can exceed 11%.
+        await c.async_set_power_limit("night_target_soc", 80)
+        await c.async_set_power_limit("night_start_soc", 40)
+        await c.async_tick()
+        self.assertTrue(c._night_active)
+        self.assertIn("80 %", c.night_status)
+        self.assertEqual(hass._states[const.ENTITY_FIELDS["charge_setpoint"][0]].state, "400")
+
+    async def test_edit_target_during_charge_stops_zero_before_guard_release(self):
+        hass, c = setup(soc=9.5)
+        await c.async_tick()
+        c.entry.options["night_target_soc"] = 80
+        hass._states[const.ENTITY_FIELDS["marstek_soc"][0]].state = "60"
+        await c.async_tick()
+        self.assertTrue(c._night_active)
+        hass.calls.clear()
+        # Changed target (still above start) is already reached at 60%.
+        await c.async_set_power_limit("night_target_soc", 40)
+        await c.async_tick()
+        self.assertFalse(c._night_active)
+        self.assertEqual(hass._states[const.ENTITY_FIELDS["charge_setpoint"][0]].state, "0")
+        self.assertEqual(hass.calls[-1][:2], ("input_boolean", "turn_off"))
+
+    async def test_invalid_order_is_rejected_without_state_change(self):
+        hass, c = setup()
+        with self.assertRaises(Exception):
+            await c.async_set_power_limit("night_start_soc", 15)
+        self.assertNotIn("night_start_soc", c.entry.options)
+        with self.assertRaises(Exception):
+            await c.async_set_power_limit("night_target_soc", 9)
+
+    async def test_100_percent_goal_allowed(self):
+        hass, c = setup(soc=50)
+        await c.async_set_power_limit("night_target_soc", 100)
+        await c.async_set_power_limit("night_start_soc", 100)
+        await c.async_tick()
+        self.assertEqual(c.decision.mode, "night_charge")
+        self.assertEqual(c.night_levels(), (100, 100))
+
+    async def test_restart_resume_with_configured_target(self):
+        hass, c = setup(soc=9.3)
+        c.entry.options["night_target_soc"] = 70
+        await c.async_tick()
+        await c._stop_night("geplanter Neustart")
+        c.entry.options["night_resume_pending"] = True
+        hass._states[const.ENTITY_FIELDS["marstek_soc"][0]].state = "60"
+        reboot = module.MarstekController(hass, c.entry)
+        await reboot.async_tick()
+        self.assertTrue(reboot._night_active)
+        self.assertEqual(hass._states[const.ENTITY_FIELDS["charge_setpoint"][0]].state, "400")
+        self.assertFalse(reboot._night_resume_pending)
+
+    async def test_manual_start_setting_change_does_not_break_running_charge(self):
+        hass, c = setup(soc=9.5)
+        c.entry.options["night_target_soc"] = 70
+        await c.async_tick()
+        hass._states[const.ENTITY_FIELDS["marstek_soc"][0]].state = "50"
+        await c.async_set_power_limit("night_start_soc", 60)
+        await c.async_tick()
+        self.assertTrue(c._night_active)
+        self.assertEqual(hass._states[const.ENTITY_FIELDS["charge_setpoint"][0]].state, "400")
