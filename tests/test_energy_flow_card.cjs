@@ -10,9 +10,12 @@ global.customElements={
 };
 class StubElement {
   attachShadow(){
-    const values=new Map(),notes=new Map(),flows=new Map(),vehicles=new Map(),single=new Map();
+    const values=new Map(),notes=new Map(),flows=new Map(),vehicles=new Map(),soc=new Map(),socBars=new Map(),single=new Map();
     const items=(map,k)=>{
-      if(!map.has(k)) map.set(k,[{textContent:"",dataset:{}},{textContent:"",dataset:{}}]);
+      if(!map.has(k)) map.set(k,Array.from({length:2},()=>({
+        textContent:"",dataset:{},attributes:{},
+        setAttribute(name,value){this.attributes[name]=value;}
+      })));
       return map.get(k);
     };
     this.shadowRoot={
@@ -22,12 +25,12 @@ class StubElement {
         return single.get(selector);
       },
       querySelectorAll(selector) {
-        const m=selector.match(/^\[data-(value|note|flow|ev)="([^"]+)"\]$/);
+        const m=selector.match(/^\[data-(value|note|flow|ev|soc|soc-bar)="([^"]+)"\]$/);
         if(!m)return [];
-        const source={value:values,note:notes,flow:flows,ev:vehicles}[m[1]];
+        const source={value:values,note:notes,flow:flows,ev:vehicles,soc,"soc-bar":socBars}[m[1]];
         return items(source,m[2]);
       },
-      _values:values,_notes:notes,_flows:flows,_vehicles:vehicles
+      _values:values,_notes:notes,_flows:flows,_vehicles:vehicles,_soc:soc,_socBars:socBars
     };
     return this.shadowRoot;
   }
@@ -111,4 +114,33 @@ test("missing EV measurement stays unavailable, not a false zero",()=>{
   assert.equal(state(c,"delta"),"missing");
   assert.equal(c.shadowRoot._notes.get("delta")[0].textContent,"Nicht verfügbar");
   assert.equal(direction(c,"delta"),"off");
+});
+
+test("in-card SoC in both responsive SVGs; no outdated footer SoC",()=>{
+  const c=card();const html=c.shadowRoot.innerHTML;
+  assert.equal((html.match(/data-soc="marstek_soc"/g)||[]).length,2);
+  assert.equal((html.match(/data-soc="solax_soc"/g)||[]).length,2);
+  assert.equal((html.match(/data-soc-bar="marstek_soc"/g)||[]).length,2);
+  assert.equal((html.match(/data-soc-bar="solax_soc"/g)||[]).length,2);
+  assert.doesNotMatch(html,/class="soc-row"/);
+  c.hass=hass();
+  assert.equal(c.shadowRoot._soc.get("marstek_soc")[0].textContent,"SoC 80 %");
+  assert.equal(c.shadowRoot._soc.get("solax_soc")[0].textContent,"SoC 100 %");
+  assert.equal(Number(c.shadowRoot._socBars.get("marstek_soc")[0].attributes.width),72);
+  assert.equal(Number(c.shadowRoot._socBars.get("solax_soc")[0].attributes.width),80);
+});
+test("SoC out-of-range is clamped and unavailable stays unknown",()=>{
+  const c=card(),h=hass();h.states["sensor.marstek_soc"].state="160";
+  h.states["sensor.solax_soc"].state="unknown";c.hass=h;
+  assert.equal(c.shadowRoot._soc.get("marstek_soc")[0].textContent,"SoC 160 %");
+  assert.equal(Number(c.shadowRoot._socBars.get("marstek_soc")[0].attributes.width),90);
+  assert.equal(c.shadowRoot._soc.get("solax_soc")[0].textContent,"SoC –");
+  assert.equal(Number(c.shadowRoot._socBars.get("solax_soc")[0].attributes.width),0);
+});
+test("premium house background and 0W cars remain legible",()=>{
+  const c=card();c.hass=hass();
+  assert.match(c.shadowRoot.innerHTML,/marstek-energy-premium-background\.webp/);
+  assert.match(c.shadowRoot.innerHTML,/\.node-ev\[data-state='idle'\]\{opacity:\.69/);
+  assert.equal(c.shadowRoot._vehicles.get("necharge")[0].dataset.state,"idle");
+  assert.equal(c.shadowRoot._vehicles.get("delta")[0].dataset.state,"idle");
 });

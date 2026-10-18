@@ -1,4 +1,4 @@
-/* Marstek Energy Flow Card 0.5.5 — frontend-only energy visualization; never writes to devices. */
+/* Marstek Energy Flow Card 0.5.6 — Premium Smart Energy; display only, never controls equipment. */
 (() => {
   'use strict';
   const DEFAULT = Object.freeze({
@@ -51,13 +51,24 @@
   };
   function node(key,label,x,y,w,h) {
     const center=w/2;
+    const battery=key==='marstek'||key==='solax';
+    const powerY=battery?h-59:h-31;
+    const noteY=battery?h-41:h-12;
+    const progress=battery?`
+      <rect class="soc-track" x="16" y="${h-25}" width="${w-100}" height="10" rx="5"/>
+      <rect class="soc-fill" data-soc-bar="${key}_soc" x="16" y="${h-25}" width="0" height="10" rx="5"/>
+      <text class="soc-label" data-soc="${key}_soc" x="${w-12}" y="${h-16}"
+        text-anchor="end">SoC –</text>`:'';
     return `<g class="node node-${key}" transform="translate(${x} ${y})">
-      <rect class="node-surface" width="${w}" height="${h}" rx="18"/>
-      <circle class="icon-disk" cx="27" cy="25" r="16"/>
+      <rect class="node-surface" width="${w}" height="${h}" rx="20"/>
+      <circle class="icon-disk" cx="27" cy="25" r="17"/>
       <text class="node-icon" x="27" y="31" text-anchor="middle">${icon[key]}</text>
       <text class="node-label" x="50" y="29">${label}</text>
-      <text class="node-power" data-value="${key}" x="${center}" y="${h-31}" text-anchor="middle">– W</text>
-      <text class="node-note" data-note="${key}" x="${center}" y="${h-12}" text-anchor="middle">Keine Messwerte</text>
+      <text class="node-power" data-value="${key}" x="${center}" y="${powerY}"
+        text-anchor="middle">– W</text>
+      <text class="node-note" data-note="${key}" x="${center}" y="${noteY}"
+        text-anchor="middle">Keine Messwerte</text>
+      ${progress}
     </g>`;
   }
   function evNode(key,label,x,y,w,h,image) {
@@ -66,7 +77,7 @@
     const imageX=(w-imageWidth)/2, imageY=compact?24:20;
     return `<g class="node node-ev node-${key}" data-ev="${key}" data-state="idle"
           transform="translate(${x} ${y})">
-      <rect class="node-surface" width="${w}" height="${h}" rx="18"/>
+      <rect class="node-surface" width="${w}" height="${h}" rx="20"/>
       <text class="ev-label" x="${cx}" y="18" text-anchor="middle">${label}</text>
       <image class="vehicle-image" href="/local/${image}" x="${imageX}" y="${imageY}"
              width="${imageWidth}" height="${imageHeight}" preserveAspectRatio="xMidYMid meet"/>
@@ -84,11 +95,11 @@
     const size=mobile?'0 0 370 768':'0 0 860 625';
     const shapes=mobile?{
       pv:[104,12,162,90],grid:[8,153,168,98],house:[98,292,174,105],
-      marstek:[194,153,168,98],solax:[104,440,162,98],
+      marstek:[194,153,168,120],solax:[104,440,162,130],
       necharge:[5,612,174,142],delta:[191,612,174,142]
     }:{
       pv:[340,15,180,96],grid:[25,177,190,104],house:[336,175,188,112],
-      marstek:[645,177,190,104],solax:[340,350,180,102],
+      marstek:[645,177,190,128],solax:[340,350,180,130],
       necharge:[45,488,238,124],delta:[577,488,238,124]
     };
     const paths=mobile?{
@@ -123,43 +134,92 @@
     </svg>`;
   }
   const styles=`
-    :host{display:block;min-width:0}
-    ha-card{display:block;overflow:hidden;padding:20px 22px 10px;background:var(--ha-card-background,var(--card-background-color,#151c2d));color:var(--primary-text-color,#f0f4fb);border-radius:24px;box-shadow:var(--ha-card-box-shadow,0 8px 24px rgba(0,0,0,.08));}
-    .header{display:flex;align-items:start;justify-content:space-between;gap:10px;flex-wrap:wrap}
-    .eyebrow{font-size:11px;letter-spacing:.15em;text-transform:uppercase;font-weight:800;color:#21a786;margin-bottom:5px}
-    .heading{font-weight:760;font-size:21px;line-height:1.2}
-    .live{display:flex;align-items:center;gap:7px;border-radius:24px;background:rgba(39,184,139,.12);padding:6px 11px;color:#12ad85;font-size:12px;font-weight:750;white-space:nowrap}
-    .live:before{content:'';width:7px;height:7px;background:currentColor;border-radius:50%;box-shadow:0 0 0 4px rgba(39,184,139,.14)}
-    .live[data-online='false']{background:rgba(230,154,55,.1);color:#db9a47}
-    .diagram{width:100%;max-width:980px;display:block;margin:8px auto -4px;overflow:visible}
+    :host{display:block;min-width:0;color:#132e50}
+    ha-card{display:block;overflow:hidden;padding:19px 20px 10px;
+      background:linear-gradient(120deg,#eef8ff 0%,#fafdff 45%,#deefff 100%);
+      border-radius:24px;border:1px solid rgba(180,214,243,.86);
+      box-shadow:0 12px 38px rgba(20,78,137,.14);color:#142e51}
+    .header{display:flex;align-items:start;justify-content:space-between;gap:10px;
+      flex-wrap:wrap;position:relative;z-index:2}
+    .eyebrow{font-size:10px;letter-spacing:.19em;text-transform:uppercase;
+      font-weight:800;color:#227bc4;margin-bottom:5px}
+    .heading{font-weight:790;font-size:23px;line-height:1.25;color:#122f51}
+    .live{display:flex;align-items:center;gap:7px;border:1px solid rgba(83,207,164,.54);
+      border-radius:24px;background:rgba(232,255,248,.86);
+      padding:7px 12px;color:#139773;font-size:12px;font-weight:750;white-space:nowrap}
+    .live:before{content:'';width:7px;height:7px;background:currentColor;
+      border-radius:50%;box-shadow:0 0 0 4px rgba(39,184,139,.14)}
+    .live[data-online='false']{background:rgba(255,242,222,.94);color:#b67c26}
+    .stage{position:relative;isolation:isolate;overflow:hidden;border-radius:20px;
+      margin-top:12px;
+      background:radial-gradient(ellipse at 50% 46%,#e8f9ff 0%,#d7ecff 80%,#e8f6ff 100%)}
+    .stage::before{content:'';position:absolute;z-index:0;inset:-6px;
+      background:url("/local/marstek-energy-premium-background.webp?v=056") center/cover no-repeat;
+      opacity:.87;pointer-events:none}
+    .stage::after{content:'';position:absolute;z-index:0;inset:0;
+      background:linear-gradient(180deg,rgba(240,249,255,.34),rgba(242,250,255,.16) 45%,rgba(235,247,255,.43));
+      pointer-events:none}
+    .diagram{width:100%;max-width:980px;display:block;margin:0 auto;
+      position:relative;z-index:1;overflow:visible}
     .diagram.mobile{display:none}
-    .node-surface{fill:var(--secondary-background-color,rgba(150,160,180,.08));stroke:var(--divider-color,rgba(170,185,205,.24));stroke-width:1.4}
-    .node-house .node-surface{stroke:rgba(29,181,143,.58);stroke-width:2;fill:rgba(29,181,143,.075)}
-    .node-label{font-family:inherit;fill:var(--secondary-text-color,#a5b0c3);font-size:13px;font-weight:700}
-    .node-power{font-family:inherit;fill:var(--primary-text-color,#f0f4fb);font-size:25px;font-weight:780}
-    .node-note{font-family:inherit;fill:var(--secondary-text-color,#a5b0c3);font-size:11px}
-    .node-icon{font-family:inherit;fill:currentColor;font-size:22px;font-weight:700}
-    .icon-disk{fill:currentColor;opacity:.11}
-    .node-pv{color:#e6ab38}.node-grid{color:#6e9ef2}.node-house{color:#24bd92}.node-marstek{color:#c18bff}.node-solax{color:#45a9db}
-    .node-ev{color:#20aaa2;transition:opacity .3s ease,filter .3s ease}
-    .node-ev[data-state='idle']{opacity:.34;filter:grayscale(1)}
-    .node-ev[data-state='missing']{opacity:.28;filter:grayscale(1)}
-    .node-ev[data-state='active'] .node-surface{stroke:rgba(30,186,158,.9);fill:rgba(30,186,158,.065);stroke-width:2}
-    .ev-label{font-family:inherit;fill:var(--primary-text-color,#f0f4fb);font-size:14px;font-weight:750}
+    .node{filter:drop-shadow(0 4px 8px rgba(42,90,141,.12))}
+    .node-surface{fill:rgba(239,248,255,.92);stroke:rgba(255,255,255,.98);
+      stroke-width:2.2}
+    .node-house .node-surface{fill:rgba(227,251,255,.94);stroke:#3dc8f5;
+      stroke-width:2.5}
+    .node-label{font-family:inherit;fill:#264564;font-size:13px;font-weight:750}
+    .node-power{font-family:inherit;fill:#072951;font-size:25px;font-weight:800}
+    .node-note{font-family:inherit;fill:#43617f;font-size:11px;font-weight:640}
+    .node-icon{font-family:inherit;fill:currentColor;font-size:22px;font-weight:750}
+    .icon-disk{fill:currentColor;opacity:.14}
+    .node-pv{color:#e4a11c}.node-grid{color:#168ee2}.node-house{color:#08acd3}
+    .node-marstek{color:#5465d4}.node-solax{color:#0989c7}
+    .soc-track{fill:rgba(125,161,192,.28)}
+    .soc-fill{fill:#3b8ce9;transition:width .4s ease}
+    .node-solax .soc-fill{fill:#10b990}
+    .soc-label{font-family:inherit;fill:#254d72;font-size:11px;font-weight:780}
+    .node-ev{color:#08a5c6;transition:opacity .3s ease,filter .3s ease}
+    .node-ev[data-state='idle']{opacity:.69;filter:grayscale(.44)}
+    .node-ev[data-state='missing']{opacity:.38;filter:grayscale(1)}
+    .node-ev[data-state='active']{opacity:1;filter:drop-shadow(0 3px 9px rgba(26,187,220,.26))}
+    .node-ev[data-state='active'] .node-surface{stroke:#49cdec;stroke-width:2.5}
+    .ev-label{font-family:inherit;fill:#183957;font-size:14px;font-weight:800}
     .ev-power{font-size:21px}
     .vehicle-image{pointer-events:none}
-    .wire[data-flow='necharge'],.wire[data-flow='delta']{color:#25bca7}
-
-    .wire{color:#60bfa7}.wire[data-flow='pv']{color:#e6ab38}.wire[data-flow='grid']{color:#6e9ef2}.wire[data-flow='marstek']{color:#bb8cff}.wire[data-flow='solax']{color:#45a9db}
-    .track,.pulse{fill:none;stroke-linecap:round;stroke-width:4}.track{stroke:currentColor;opacity:.16}.pulse{stroke:currentColor;stroke-dasharray:4 13;animation:energy-dash 1.05s linear infinite;opacity:.9}
-    .wire[data-direction='off'] .pulse{opacity:0;animation:none}.wire[data-direction='reverse'] .pulse{animation-direction:reverse}
-    @keyframes energy-dash{to{stroke-dashoffset:-34}}
-    .footer{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;padding:0 0 8px;color:var(--secondary-text-color,#a5b0c3);font-size:11px}
-    .soc-row{display:flex;gap:13px;align-items:center;flex-wrap:wrap}
-    .soc{display:flex;gap:6px;align-items:center;font-size:12px}.soc b{color:var(--primary-text-color,#f0f4fb);font-variant-numeric:tabular-nums}
-    .soc .spot{width:8px;height:8px;border-radius:50%;background:#bb8cff}.soc.solax .spot{background:#45a9db}
-    @media (max-width:620px){ha-card{padding:16px 12px 10px;border-radius:18px}.heading{font-size:19px}.diagram.desktop{display:none}.diagram.mobile{display:block;max-width:420px;margin:10px auto 0}.node-power{font-size:23px}.node-label{font-size:12px}.node-note{font-size:10px}.ev-power{font-size:20px}.ev-label{font-size:12px}.footer{font-size:10px}}
-    @media (prefers-reduced-motion:reduce){.pulse{animation:none!important;stroke-dasharray:none;opacity:.52}}
+    .wire{color:#119af3}
+    .wire[data-flow='pv']{color:#e9ac2b}
+    .wire[data-flow='grid']{color:#09b996}
+    .wire[data-flow='marstek']{color:#279efa}
+    .wire[data-flow='solax']{color:#259ee9}
+    .wire[data-flow='necharge'],.wire[data-flow='delta']{color:#11b5e6}
+    .track,.pulse{fill:none;stroke-linecap:round;stroke-width:4}
+    .track{stroke:currentColor;opacity:.26}
+    .pulse{stroke:currentColor;stroke-width:4.5;
+      stroke-dasharray:7 13;animation:energy-dash .95s linear infinite;
+      opacity:1;filter:drop-shadow(0 0 4px currentColor)}
+    .wire[data-direction='off'] .pulse{opacity:0;animation:none}
+    .wire[data-direction='reverse'] .pulse{animation-direction:reverse}
+    @keyframes energy-dash{to{stroke-dashoffset:-40}}
+    .footer{display:flex;justify-content:end;align-items:center;gap:10px;
+      flex-wrap:wrap;padding:9px 2px 2px;color:#56758e;font-size:11px}
+    @media(max-width:620px){
+      ha-card{padding:15px 11px 9px;border-radius:18px}
+      .heading{font-size:20px}
+      .diagram.desktop{display:none}
+      .diagram.mobile{display:block;max-width:420px}
+      .node-power{font-size:23px}
+      .node-label{font-size:12px}
+      .node-note{font-size:10px}
+      .soc-label{font-size:10px}
+      .ev-label{font-size:12px}
+      .ev-power{font-size:20px}
+      .footer{font-size:10px}
+    }
+    @media(prefers-reduced-motion:reduce){
+      .pulse{animation:none!important;stroke-dasharray:none;opacity:.50}
+      .wire[data-direction='off'] .pulse{opacity:0}
+      .soc-fill{transition:none}
+    }
   `;
   class MarstekEnergyFlowCard extends HTMLElement {
     constructor(){ super();this.attachShadow({mode:'open'});this._hass=null;this._conf=null; }
@@ -173,10 +233,8 @@
       this.shadowRoot.innerHTML=`<style>${styles}</style><ha-card>
         <div class="header"><div><div class="eyebrow">MARSTEK · ENERGY STUDIO</div><div class="heading">${esc(this._conf.title)}</div></div>
         <div class="live" data-online="false">LIVE · keine Daten</div></div>
-        ${diagram(false)}${diagram(true)}
-        <div class="footer"><div class="soc-row"><span class="soc"><span class="spot"></span> Marstek <b data-soc="marstek_soc">–</b></span>
-        <span class="soc solax"><span class="spot"></span> SolaX <b data-soc="solax_soc">–</b></span></div>
-        <span>Hausverbrauch ≈ berechnet (inkl. Wallboxen) · Leitungen = Leistungsrichtungen</span></div>
+        <div class="stage">${diagram(false)}${diagram(true)}</div>
+        <div class="footer">Hausverbrauch ≈ berechnet (inkl. Wallboxen) · Leitungen = Leistungsrichtungen</div>
         </ha-card>`;
       if (this._hass) this._update();
     }
@@ -205,8 +263,12 @@
         for(const node of this.shadowRoot.querySelectorAll(`[data-ev="${key}"]`))
           node.dataset.state=d[key]===null?'missing':d[key]>5?'active':'idle';
       for(const k of ['solax_soc','marstek_soc']) {
-        const el=this.shadowRoot.querySelector(`[data-soc="${k}"]`);
-        if(el)el.textContent=d[k]===null?'–':`${format(d[k])} %`;
+        const soc=d[k],base=k==='marstek_soc'?'marstek':'solax';
+        const trackWidth=(base==='marstek'?190:180)-100;
+        for(const el of this.shadowRoot.querySelectorAll(`[data-soc="${k}"]`))
+          el.textContent=soc===null?'SoC –':`SoC ${format(soc)} %`;
+        for(const bar of this.shadowRoot.querySelectorAll(`[data-soc-bar="${k}"]`))
+          bar.setAttribute('width',String(soc===null?0:Math.max(0,Math.min(100,soc))*trackWidth/100));
       }
       const direction = {
         pv:d.pv===null||d.pv<=5?'off':'forward',
@@ -226,5 +288,5 @@
   }
   if(!customElements.get('marstek-energy-flow-card'))customElements.define('marstek-energy-flow-card',MarstekEnergyFlowCard);
   window.customCards=window.customCards||[];
-  window.customCards.push({type:'marstek-energy-flow-card',name:'Marstek Energiefluss',description:'Animierter Live-Energiefluss für PV, Netz, Haus, SolaX, Marstek, NeCharge und Delta-Wallbox'});
+  window.customCards.push({type:'marstek-energy-flow-card',name:'Marstek Energiefluss',description:'Premium-Glass-Energiefluss mit SoC in Batteriekarten, Teslas und Live-Sensoren'});
 })();

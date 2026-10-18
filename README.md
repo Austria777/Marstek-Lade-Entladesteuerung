@@ -1,3 +1,51 @@
+# Marstek Energy Studio v0.5.6 – Premium Smart Energy (Glass-Design)
+
+**Neue Darstellung der vorhandenen Custom-Card**, basierend auf der gemeinsam
+ausgewählten Hausgrafik. Der Hintergrund ist eine **weichgezeichnete Version
+der freigegebenen Illustration**, damit eingebrannte Beispielwerte im Bild
+nicht mit den **echten Home-Assistant-Livewerten** verwechselt werden.
+Die Energiepfade und Karten mit PV/Netz/Haus/Marstek/SolaX/NeCharge/Delta
+werden von JavaScript darüber **dynamisch** gerendert. Bei fehlender
+Bilddatei erscheint ein dezenter blauer Verlaufs-Hintergrund als Fallback.
+
+- Glassmorphism-Karten mit heller Blau-Palette, Neon-Leitungen und animierten
+  Impulsen abhängig von den **wirklichen** Messwerten.
+- **Marstek Battery / SolaX Battery**: SoC als **Prozentwert plus Balken
+  direkt innerhalb der jeweiligen Batteriekarte** (Desktop und Mobile).
+  Die doppelte SoC-Anzeige links unten in der Flow-Karte entfällt.
+- **NeCharge / Delta**: bestehende Model-3-Highland-/Model-Y-Juniper-Bilder
+  bleiben. Bei **0 W** nun zu ca. **69 %** sichtbar, bei aktivem Laden
+  hell und mit Glow; fehlende Messung klar als unbekannt gekennzeichnet.
+- Keine Änderungen am Hausleistungsmodell, an den Entitätszuordnungen oder
+  an der Marstek-Lade- und Entladesteuerung.
+- Keine neuen Dummy-Messwerte, fiktiven Autarkie-/CO₂-Daten oder
+  statischen Werte aus dem Layoutbild werden als Live-Daten ausgegeben.
+
+**Installation:**
+
+1. In **HACS** auf v0.5.6 aktualisieren, HA neu starten.
+2. **Custom-Frontend-Datei separat aktualisieren**: GitHub-Datei
+   `www/marstek-energy-flow-card.js` nach `/config/www/` kopieren,
+   ersetzt die vorherige JS-Datei (HACS kopiert diese separat gespeicherte
+   Custom-Card nicht automatisch).
+3. Die bereitgestellte **marstek-energy-premium-background.webp** (weiche,
+   für die Livekarte vorbereitete Variante der freigegebenen Hausgrafik)
+   ebenfalls in den HA-Ordner `/config/www/` kopieren.
+   **Hinweis:** Das Bild ist als begleitender Download im Chat verfügbar und
+   nicht automatisch Bestandteil der GitHub-Integration.
+4. Unter *Einstellungen → Dashboards → Ressourcen* die bisherige
+   Modul-Ressource auf
+   `/local/marstek-energy-flow-card.js?v=056` ändern; den Browser-Cache
+   (ggf. Strg+F5 / Chrome Inkognito) neu laden.
+5. Die bisherigen Tesla-WebP-Dateien müssen im selben Ordner
+   `/config/www/` bleiben. Bestehende Dashboard-YAML v0.5.5 mit
+   den zwei Ladepunkt-Entitäten funktioniert unverändert.
+
+**Prüfung:** Neuer Hintergrund über
+`/local/marstek-energy-premium-background.webp` erreichbar;
+neue JS-Datei beginnt mit `Marstek Energy Flow Card 0.5.6`.
+Der Hintergrund ist dekorativ und keine Quelle für Echtzeitwerte.
+
 # Marstek Energy Studio v0.5.5 – Energiefluss mit zwei Tesla-Ladepunkten
 
 **Neu:** Der Energiefluss zeigt NeCharge und Delta Wallbox als zwei immer
