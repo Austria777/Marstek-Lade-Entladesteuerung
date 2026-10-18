@@ -5,6 +5,7 @@ from homeassistant.components.sensor import SensorEntity, SensorDeviceClass
 from homeassistant.const import PERCENTAGE, UnitOfPower
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
+from homeassistant.loader import async_get_integration
 from homeassistant.helpers.entity import DeviceInfo
 
 from .const import DOMAIN
@@ -12,6 +13,9 @@ from .const import DOMAIN
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_entities):
     controller = entry.runtime_data
+    # Home Assistant loads the installed manifest: no separate hardcoded version.
+    integration = await async_get_integration(hass, DOMAIN)
+    software_version = str(integration.manifest.get("version", "unbekannt"))
     async_add_entities([
         MarstekManagerSensor(controller, entry, "mode", "Betriebsmodus"),
         MarstekManagerSensor(controller, entry, "charge_target_w", "Ladeziel"),
@@ -26,6 +30,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
         MarstekManagerSensor(controller, entry, "emergency_status", "Notfall Status"),
         MarstekManagerSensor(controller, entry, "marstek_soc", "Marstek Ladezustand"),
         MarstekManagerSensor(controller, entry, "night_status", "Nachtladung Status"),
+        MarstekVersionSensor(entry, software_version),
     ])
 
 
@@ -117,3 +122,22 @@ class MarstekManagerSensor(SensorEntity):
         if self.key == "mode":
             return {"reason": self.controller.decision.reason, "interval_s": 7}
         return None
+
+
+class MarstekVersionSensor(SensorEntity):
+    """Expose the locally installed integration version to the dashboard."""
+
+    _attr_has_entity_name = True
+    _attr_should_poll = False
+    _attr_name = "Softwareversion"
+    _attr_icon = "mdi:tag-outline"
+
+    def __init__(self, entry: ConfigEntry, version: str) -> None:
+        self._attr_unique_id = f"{entry.entry_id}_software_version"
+        self._attr_native_value = version
+        self._attr_device_info = DeviceInfo(
+            identifiers={(DOMAIN, entry.entry_id)},
+            name=entry.title,
+            manufacturer="Custom integration",
+            model="Marstek PV rule controller",
+        )
