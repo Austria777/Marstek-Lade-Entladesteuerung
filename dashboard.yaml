@@ -12,7 +12,7 @@ views:
     cards:
     - type: custom:mushroom-title-card
       title: Marstek · Energy Studio
-      subtitle: Live-Übersicht deiner PV-Anlage und beider Speicher
+      subtitle: PV, Speicher und beide Tesla-Ladepunkte im Live-Überblick
       grid_options:
         columns: full
     - type: custom:mushroom-chips-card
@@ -112,6 +112,8 @@ views:
         solax: sensor.solax_m_battery_power_charge
         solax_soc: sensor.solax_m_battery_capacity_2
         marstek_soc: sensor.marstek_venus_modbus_soc_batterie
+        necharge: sensor.necharge_ladeleistung
+        delta: sensor.evcc_delta_ac_smart_wallbox_charge_power
   - type: grid
     cards:
     - type: heading
