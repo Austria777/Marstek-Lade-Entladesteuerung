@@ -1,3 +1,9 @@
+# Marstek Energy Studio v0.5.2 – Versionsanzeige im Dashboard
+
+**Neu in v0.5.2:** Ein neuer Sensor `sensor.marstek_pv_manager_softwareversion` zeigt die **tatsächlich installierte Integration-Version** aus dem Home-Assistant-Integrationsmanifest. Im Kopfbereich von `dashboard.yaml` und `dashboard-view.yaml` erscheint ein kleiner Versions-Chip, z. B. „Version 0.5.2“. Der Sensor wird beim Laden der Integration gesetzt und nach dem nächsten HACS-Update/HA-Neustart automatisch aktualisiert. Die Regelung, Ladegrenzen und Nachtladung wurden nicht verändert.
+
+**Installation:** Integration über HACS aktualisieren und Home Assistant neu starten. Die neue Dashboard-YAML aus dem Repository erneut übernehmen, damit der Chip angezeigt wird.
+
 # Marstek Energy Studio v0.5.1 – optionale Hardware-Ladegrenze
 
 **Integrierte Nachtladefunktion bislang nur in simulierten Tests geprüft; Notfall-Netzladung wurde bereits mit 300 W am Nutzergerät getestet.** Für diesen Modus greift die Integration auf die bestehenden Marstek-Venus-Modbus-Schreibentitäten zu. Zuerst separat und beaufsichtigt testen.
