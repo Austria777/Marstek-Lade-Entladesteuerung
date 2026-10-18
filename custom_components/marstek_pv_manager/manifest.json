@@ -1,7 +1,7 @@
 {
   "domain": "marstek_pv_manager",
   "name": "Marstek PV Manager",
-  "version": "0.5.6",
+  "version": "0.5.7",
   "integration_type": "helper",
   "config_flow": true,
   "codeowners": [],
