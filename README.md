@@ -1,3 +1,35 @@
+# Marstek Energy Studio v0.5.3 – konfigurierbare Mindest-SoC-Nachtladung
+
+**Neu in v0.5.3:** Zwei unabhängige Dashboard-Regler für die integrierte
+Mindest-SoC-Nachtladung:
+
+- `number.marstek_pv_manager_nachtladung_start_soc`: **Start-SoC 9–100 %**, Standard **9 %**.
+  Der Marstek beginnt, sobald er in den eingestellten angezeigten Prozentbereich
+  fällt (z. B. 9,x % bei Einstellung 9). Dies entspricht dem bisherigen Start
+  bei unter 10 %.
+- `number.marstek_pv_manager_nachtladung_ziel_soc`: **Ziel-SoC 10–100 %**, Standard **11 %**.
+  Eine laufende Nachtladung endet bei Erreichen des Ziel-SoC.
+
+Bei der Eingabe gilt: **Start-SoC darf nicht höher als Ziel-SoC sein**.
+Bei Start = Ziel gibt es keine Hysterese; für eine stabile Reserve empfiehlt
+sich mindestens 1 Prozentpunkt Abstand. Zuerst ggf. den Zielwert erhöhen,
+dann den Startwert. Die Zahlen werden in den Integrationsoptionen gespeichert
+und bleiben über Home-Assistant-Neustarts erhalten.
+
+Die **Ladeleistung bleibt fest auf 400 W** und das Nachtfenster auf **00:00–06:00 Uhr**.
+Der Nachtlade-Schalter funktioniert weiterhin unabhängig von der normalen
+PV-Automatik. Während einer aktiven Ladung führt ein abgesenktes Ziel, das
+bereits erreicht ist, zum kontrollierten Stopp (beide Sollwerte 0 vor Freigabe
+des Sperrhelfers). Bei Neustart wird eine zuvor laufende Nachtladung bis zum
+aktuell eingestellten Ziel fortgesetzt, sofern es im Nachtfenster noch nicht
+erreicht ist. Gerätebezogene 400-W-Grenzen, Notfallmodus, Hardware-Ladelimit-
+Synchronisierung und die PV-Regellogik sind ansonsten unverändert.
+
+**Einrichtung:** HACS-Update auf v0.5.3, Home Assistant neu starten und
+`dashboard.yaml` bzw. `dashboard-view.yaml` aus dem Repository neu übernehmen.
+Die beiden Schieberegler stehen im Abschnitt „Mindest-SoC · Nachtladung“.
+Die Einstellungen sind auch im Optionsdialog („Grenzwerte und Zeiten“) verfügbar.
+
 # Marstek Energy Studio v0.5.2 – Versionsanzeige im Dashboard
 
 **Neu in v0.5.2:** Ein neuer Sensor `sensor.marstek_pv_manager_softwareversion` zeigt die **tatsächlich installierte Integration-Version** aus dem Home-Assistant-Integrationsmanifest. Im Kopfbereich von `dashboard.yaml` und `dashboard-view.yaml` erscheint ein kleiner Versions-Chip, z. B. „Version 0.5.2“. Der Sensor wird beim Laden der Integration gesetzt und nach dem nächsten HACS-Update/HA-Neustart automatisch aktualisiert. Die Regelung, Ladegrenzen und Nachtladung wurden nicht verändert.
