@@ -1,3 +1,44 @@
+# Marstek Energy Studio v0.5.8 – Variante B: realistisches Haus mit mittlerer Unschärfe
+
+Diese Version korrigiert **ausschließlich den Hintergrund** des Energieflusses:
+Die Comic-/SVG-Hausillustration aus v0.5.7 entfällt; an ihrer Stelle wird
+ein echtes Foto eines modern verglasten Hauses bei Dämmerung verwendet.
+Das Foto ist **im Stil** der ursprünglichen Premium-Hausvorlage, enthält
+aber keine fest eingebauten Interface-Elemente, Stromwerte oder Autos.
+
+- **PC / Tablet:** Hintergrund mit `filter:blur(7px)`
+- **Smartphone (bis 620px):** Hintergrund mit `filter:blur(12px)`
+- Nur der Hintergrund wird unscharf gezeichnet. Batterie-, Tesla- und
+  Energiekarten sowie die animierten Leitungen bleiben scharf und live.
+- Die **Marstek- und SolaX-Karten aus v0.5.7**, inklusive der Geräteabbildungen
+  links, Watt/Status rechts und SoC-Balken unten, bleiben unverändert.
+- Alle Lade- und Entladeregelungen, Messsensoren und Leistungsbilanzen
+  bleiben unverändert.
+
+**Herkunft des Fotos:** Michael Brown (@vettexan),
+[Modern luxury home with swimming pools at dusk](https://unsplash.com/photos/modern-luxury-home-with-swimming-pools-at-dusk-q6eSeT3euLU),
+verwendet unter der [Unsplash-Lizenz](https://unsplash.com/license).
+Die Custom-Karte lädt das Bild direkt von `images.unsplash.com`, damit
+**kein zusätzlicher Bild-Upload in den Home-Assistant-Ordner notwendig** ist.
+Dies erfordert beim Anzeigen der Karte Internetzugang im Browser. Falls die
+Bildquelle nicht erreichbar ist, bleibt der blaue Hintergrundverlauf sichtbar.
+
+**Aktualisierung:**
+
+1. In HACS v0.5.8 installieren, Home Assistant neu starten.
+2. GitHub-Datei `www/marstek-energy-flow-card.js` nach `/config/www/`
+   kopieren und die vorhandene JavaScript-Datei ersetzen.
+3. Unter **Einstellungen → Dashboards → Ressourcen** auf
+   `/local/marstek-energy-flow-card.js?v=058` umstellen (JavaScript-Modul).
+4. Den Browser mit **Strg+F5** vollständig neu laden bzw. HA-Tabs
+   schließen. Die vorhandenen Dashboard-YAML-Dateien und Tesla-Bilder
+   können unverändert bleiben. Das alte Premium-Hintergrundbild wird
+   nicht mehr benötigt.
+
+Wenn die Bildschärfe auf dem jeweiligen Gerät noch nicht passt,
+sind nur die Werte `blur(7px)` und `blur(12px)` in der JS-Datei
+anzupassen.
+
 # Marstek Energy Studio v0.5.7 – Batteriekarten nach Muster + scharfes Haus
 
 **Neu:** Die beiden Batteriekarten sind im Stil des bereitgestellten
