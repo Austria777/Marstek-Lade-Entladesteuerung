@@ -337,19 +337,29 @@ class ConfigurableNightThresholdTests(unittest.TestCase):
         self.assertEqual(self.plan(start=9, target=10, soc=10, active=True, guard=True).action,
                          "stop")
 
-    def test_equal_100_100_is_valid_without_hysteresis(self):
-        self.assertEqual(self.plan(start=100, target=100, soc=99.9).action, "start")
-        self.assertEqual(self.plan(start=100, target=100, soc=100).action, "wait")
-        self.assertEqual(self.plan(start=100, target=100, soc=100, active=True, guard=True).action,
-                         "stop")
+    def test_equal_levels_are_invalid(self):
+        self.assertEqual(self.plan(start=50, target=50, soc=49.9).action, "wait")
+        self.assertEqual(self.plan(start=50, target=50, soc=49.9, active=True, guard=True).action,
+                         "invalid")
+
+    def test_start_range_9_to_50_and_goal_up_to_100(self):
+        self.assertEqual(self.plan(start=50, target=100, soc=50.9).action, "start")
+        self.assertEqual(self.plan(start=50, target=100, soc=51).action, "wait")
+        self.assertEqual(self.plan(start=51, target=100, soc=30).action, "wait")
+        self.assertEqual(self.plan(start=51, target=100, soc=30, active=True, guard=True).action,
+                         "invalid")
+
+    def test_six_am_stops_even_far_below_target(self):
+        self.assertEqual(self.plan(start=50, target=100, soc=52, hour=6,
+                                   active=True, guard=True).action, "stop")
 
     def test_invalid_order_never_starts_and_aborts_active(self):
         self.assertEqual(self.plan(start=90, target=80).action, "wait")
         self.assertEqual(self.plan(start=90, target=80, active=True, guard=True).action, "invalid")
 
     def test_missing_soc_at_high_target_stops(self):
-        self.assertEqual(self.plan(start=60, target=80, soc=None, active=True, guard=True).action,
+        self.assertEqual(self.plan(start=50, target=80, soc=None, active=True, guard=True).action,
                          "invalid")
 
     def test_daytime_never_starts_even_with_high_target(self):
-        self.assertEqual(self.plan(start=80, target=90, soc=50, hour=12).action, "wait")
+        self.assertEqual(self.plan(start=50, target=90, soc=50, hour=12).action, "wait")
