@@ -49,7 +49,7 @@ class MarstekPowerLimit(NumberEntity):
             self._attr_device_class = None
             self._attr_native_unit_of_measurement = "%"
             self._attr_native_min_value = 9 if key == "night_start_soc" else 10
-            self._attr_native_max_value = 100
+            self._attr_native_max_value = 50 if key == "night_start_soc" else 100
             self._attr_native_step = 1
             self._attr_icon = ("mdi:battery-arrow-down-outline"
                                if key == "night_start_soc" else "mdi:battery-check")
