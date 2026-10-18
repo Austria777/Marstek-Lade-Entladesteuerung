@@ -26,3 +26,5 @@ jobs:
           node-version: '22'
       - name: Check custom card syntax
         run: node --check www/marstek-energy-flow-card.js
+      - name: Test EV energy-flow frontend
+        run: node --test tests/test_energy_flow_card.cjs
