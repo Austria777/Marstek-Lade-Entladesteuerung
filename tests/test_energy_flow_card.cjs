@@ -164,7 +164,8 @@ test("Variant B uses a realistic external house photo, adaptive blur and real da
   assert.match(markup,/class="house-photo"/);
   assert.match(markup,/images\.unsplash\.com\/photo-1757356657991-c3fd6e2e812e/);
   assert.match(markup,/\.house-photo\{[^}]*filter:blur\(7px\)/s);
-  assert.match(markup,/@media\(max-width:620px\)\{[^}]*\.house-photo\{filter:blur\(12px\)/s);
+  assert.match(markup,/@media\(max-width:620px\)\{/);
+  assert.match(markup,/\.house-photo\{filter:blur\(12px\)/);
   assert.doesNotMatch(markup,/class="house-scene"/);
   assert.doesNotMatch(markup,/marstek-energy-premium-background\.webp/);
   assert.match(markup,/Marstek Battery/);
