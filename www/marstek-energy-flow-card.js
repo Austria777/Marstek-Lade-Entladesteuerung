@@ -1,4 +1,4 @@
-/* Marstek Energy Flow Card 0.5.7 — sharp house + sample-inspired battery UI; display only. */
+/* Marstek Energy Flow Card 0.5.8 — Variante B: realistic photo, 7px desktop / 12px mobile blur; display only. */
 (() => {
   'use strict';
   const DEFAULT = Object.freeze({
@@ -196,64 +196,10 @@
       ${evNode('delta','Delta · Model Y',...shapes.delta,'tesla-modely-juniper-stealth-grey.webp')}
     </svg>`;
   }
-  // Sharp background scene contains only the building; never static widgets, cars or watts.
-  function houseScene(){
-    const windows=Array.from({length:9},(_,i)=>`<path d="M${255+i*99} 391 V644" stroke="#244763" stroke-width="8"/>`).join('');
-    const solar=Array.from({length:13},(_,i)=>`<path d="M${208+i*27} ${335-i*8} L${245+i*25} ${357-i*7}"
-      stroke="#83c8fa" stroke-width="2" opacity=".64"/>`).join('');
-    const leaves=Array.from({length:18},(_,i)=>{
-      const x=i<9?25+i*17:1220+(i-9)*17;
-      const y=365-(i%5)*20;
-      return `<ellipse cx="${x}" cy="${y}" rx="49" ry="65" fill="#4b7c7b" opacity=".55"/>`;
-    }).join('');
-    return `<svg class="house-scene" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 920"
-        preserveAspectRatio="xMidYMid slice" aria-hidden="true" focusable="false">
-      <defs>
-        <linearGradient id="scene-sky" x2="0" y2="1">
-          <stop stop-color="#8bbbe5"/><stop offset=".52" stop-color="#e6f5ff"/>
-          <stop offset="1" stop-color="#5a96b7"/>
-        </linearGradient>
-        <linearGradient id="scene-pool" x2="0" y2="1">
-          <stop stop-color="#a4d7f0"/><stop offset=".65" stop-color="#549abd"/>
-          <stop offset="1" stop-color="#215878"/>
-        </linearGradient>
-        <linearGradient id="scene-panels" x2="0" y2="1">
-          <stop stop-color="#2a83ca"/><stop offset=".5" stop-color="#0c4388"/>
-          <stop offset="1" stop-color="#061e53"/>
-        </linearGradient>
-        <linearGradient id="scene-windows" x2="0" y2="1">
-          <stop stop-color="#4182af"/><stop offset=".32" stop-color="#5b829f"/>
-          <stop offset=".64" stop-color="#efc496"/><stop offset="1" stop-color="#eda45d"/>
-        </linearGradient>
-      </defs>
-      <rect width="1440" height="920" fill="url(#scene-sky)"/>
-      <path d="M0 414 Q220 343 424 393 Q660 330 894 395 Q1185 345 1440 410
-        L1440 680 L0 680Z" fill="#779aa4" opacity=".62"/>
-      <path d="M0 475 Q330 425 545 458 Q892 399 1440 471
-        L1440 700 L0 700Z" fill="#517980" opacity=".54"/>
-      ${leaves}
-      <rect x="196" y="359" width="1051" height="345" fill="#dae5e6" stroke="#fff" stroke-width="5"/>
-      <rect x="233" y="385" width="978" height="294" fill="#193b56"/>
-      <rect x="245" y="393" width="953" height="270" fill="url(#scene-windows)"/>
-      <path d="M216 520 H1208" stroke="#0f314d" stroke-width="14"/>
-      ${windows}
-      <path d="M143 363 L700 175 L1323 369 L1219 396 L699 248 L220 395Z"
-        fill="#183b63" stroke="#e0f1ff" stroke-width="7"/>
-      <path d="M202 341 L700 202 L1214 355 L1196 378 L699 256 L235 370Z"
-        fill="url(#scene-panels)" stroke="#77c0fc" stroke-width="3"/>
-      ${solar}
-      <path d="M698 202 L699 256 L1196 378" stroke="#79bafa" stroke-width="4"
-        fill="none" opacity=".76"/>
-      <path d="M177 694 H1250 L1316 753 H115Z" fill="#bdcfd6"/>
-      <path d="M0 763 H1440 V920 H0Z" fill="url(#scene-pool)"/>
-      <path d="M0 769 Q400 749 765 773 Q1110 750 1440 765"
-        fill="none" stroke="#e7f8ff" stroke-width="7" opacity=".78"/>
-      <path d="M102 809 Q390 788 613 815 T1140 811" fill="none"
-        stroke="#c7f4fd" stroke-width="2" opacity=".35"/>
-      <path d="M103 864 Q466 846 654 865 T1302 865" fill="none"
-        stroke="#b1e6fc" stroke-width="2" opacity=".25"/>
-    </svg>`;
-  }
+  // An Unsplash photograph is used purely as the scenic background.
+  // It contains no watt figures, cars or overlaid interface; all energy values are live.
+  // Attribution: Michael Brown (@vettexan), Unsplash License:
+  // https://unsplash.com/photos/modern-luxury-home-with-swimming-pools-at-dusk-q6eSeT3euLU
   const styles=`
     :host{display:block;min-width:0;color:#132e50}
     ha-card{display:block;overflow:hidden;padding:19px 20px 10px;
@@ -274,9 +220,13 @@
     .stage{position:relative;isolation:isolate;overflow:hidden;border-radius:20px;
       margin-top:12px;
       background:radial-gradient(ellipse at 50% 46%,#e8f9ff 0%,#d7ecff 80%,#e8f6ff 100%)}
-    .house-scene{position:absolute;inset:0;width:100%;height:100%;z-index:0;pointer-events:none}
+    /* 7px desktop / 12px mobile. Image is outside SVG, so overlay text stays sharp. */
+    .house-photo{position:absolute;inset:-26px;z-index:0;pointer-events:none;
+      background-image:url("https://images.unsplash.com/photo-1757356657991-c3fd6e2e812e?auto=format&fit=crop&w=1440&q=76");
+      background-position:center 54%;background-size:cover;background-repeat:no-repeat;
+      filter:blur(7px);opacity:.91;transform:scale(1.02)}
     .stage::after{content:'';position:absolute;z-index:0;inset:0;
-      background:linear-gradient(180deg,rgba(240,249,255,.11),rgba(239,248,255,.15) 55%,rgba(236,247,255,.21));
+      background:linear-gradient(180deg,rgba(233,245,255,.24),rgba(236,248,255,.18) 55%,rgba(225,244,255,.33));
       pointer-events:none}
     .diagram{width:100%;max-width:980px;display:block;margin:0 auto;
       position:relative;z-index:1;overflow:visible}
@@ -331,6 +281,7 @@
     @media(max-width:620px){
       ha-card{padding:15px 11px 9px;border-radius:18px}
       .heading{font-size:20px}
+      .house-photo{filter:blur(12px);background-position:center 50%}
       .diagram.desktop{display:none}
       .diagram.mobile{display:block;max-width:420px}
       .node-power{font-size:23px}
@@ -360,7 +311,7 @@
       this.shadowRoot.innerHTML=`<style>${styles}</style><ha-card>
         <div class="header"><div><div class="eyebrow">MARSTEK · ENERGY STUDIO</div><div class="heading">${esc(this._conf.title)}</div></div>
         <div class="live" data-online="false">LIVE · keine Daten</div></div>
-        <div class="stage">${houseScene()}${diagram(false)}${diagram(true)}</div>
+        <div class="stage"><div class="house-photo" aria-hidden="true"></div>${diagram(false)}${diagram(true)}</div>
         <div class="footer">Hausverbrauch ≈ berechnet (inkl. Wallboxen) · Leitungen = Leistungsrichtungen</div>
         </ha-card>`;
       if (this._hass) this._update();
@@ -416,5 +367,5 @@
   }
   if(!customElements.get('marstek-energy-flow-card'))customElements.define('marstek-energy-flow-card',MarstekEnergyFlowCard);
   window.customCards=window.customCards||[];
-  window.customCards.push({type:'marstek-energy-flow-card',name:'Marstek Energiefluss',description:'Premium-Glass-Live-Energiefluss mit realistisch gestalteten Batteriekarten und scharfem Haus'});
+  window.customCards.push({type:'marstek-energy-flow-card',name:'Marstek Energiefluss',description:'Premium-Glass-Energiefluss mit Fotohintergrund (Desktop 7px, Mobil 12px), Batterie-SoC und Teslas'});
 })();
