@@ -10,7 +10,7 @@ global.customElements={
 };
 class StubElement {
   attachShadow(){
-    const values=new Map(),notes=new Map(),flows=new Map(),vehicles=new Map(),soc=new Map(),socBars=new Map(),gridWave=new Map(),single=new Map();
+    const values=new Map(),notes=new Map(),flows=new Map(),vehicles=new Map(),soc=new Map(),socBars=new Map(),gridWave=new Map(),pvBars=new Map(),pvPct=new Map(),single=new Map();
     const items=(map,k)=>{
       if(!map.has(k)) map.set(k,Array.from({length:2},()=>({
         textContent:"",dataset:{},attributes:{},
@@ -26,12 +26,12 @@ class StubElement {
         return single.get(selector);
       },
       querySelectorAll(selector) {
-        const m=selector.match(/^\[data-(value|note|flow|ev|soc|soc-bar|grid-wave)="([^"]+)"\]$/);
+        const m=selector.match(/^\[data-(value|note|flow|ev|soc|soc-bar|grid-wave|pv-bar|pv-pct)="([^"]+)"\]$/);
         if(!m)return [];
-        const source={value:values,note:notes,flow:flows,ev:vehicles,soc,"soc-bar":socBars,"grid-wave":gridWave}[m[1]];
+        const source={value:values,note:notes,flow:flows,ev:vehicles,soc,"soc-bar":socBars,"grid-wave":gridWave,"pv-bar":pvBars,"pv-pct":pvPct}[m[1]];
         return items(source,m[2]);
       },
-      _values:values,_notes:notes,_flows:flows,_vehicles:vehicles,_soc:soc,_socBars:socBars,_gridWave:gridWave
+      _values:values,_notes:notes,_flows:flows,_vehicles:vehicles,_soc:soc,_socBars:socBars,_gridWave:gridWave,_pvBars:pvBars,_pvPct:pvPct
     };
     return this.shadowRoot;
   }
@@ -59,6 +59,7 @@ function hass(necharge="0", delta="0", deltaUnit="kW"){
   const make=(value,unit="W")=>({state:String(value),attributes:{unit_of_measurement:unit}});
   return {states:{
     "sensor.pv":make("7000"),
+    "number.marstek_pv_manager_pv_anzeige_maximum":make("8400","W"),
     "sensor.grid":make("1000"),
     "sensor.marstek":make("-1500"),
     "sensor.solax":make("0"),
@@ -237,4 +238,65 @@ test("house icon does not alter live power calculation or other flow statuses",(
   assert.equal(state(c,"necharge"),"active");
   assert.equal(state(c,"delta"),"active");
   assert.equal(c.shadowRoot._soc.get("marstek_soc")[0].textContent,"SoC 80 %");
+});
+
+function blueBars(c) {
+  return Array.from({length:6},(_,i)=>c.shadowRoot._pvBars.get(String(i))?.[0].dataset.on==="true")
+    .filter(Boolean).length;
+}
+test("six full-height PV signal bars and utilisation percentage in both diagrams",()=>{
+  const c=card(),html=c.shadowRoot.innerHTML;
+  assert.equal((html.match(/class="pv-signal-bar"/g)||[]).length,12);
+  assert.equal((html.match(/data-pv-pct="true"/g)||[]).length,2);
+  assert.doesNotMatch(html,/opacity="\$\{\.3\+i\*\.14\}"/);
+  assert.match(html,/\.pv-signal-bar\[data-on='true'\]/);
+  assert.match(html,/\.pv-signal-bar\{fill:#b5c5d2/);
+  const h=hass();h.states["sensor.pv"].state="3717";
+  c.hass=h;
+  assert.equal(blueBars(c),3);
+  assert.equal(c.shadowRoot._pvPct.get("true")[0].textContent,"44 %");
+  assert.equal(c.shadowRoot._pvPct.get("true")[1].textContent,"44 %");
+  for(let i=0;i<6;i++)
+    assert.equal(c.shadowRoot._pvBars.get(String(i))[1].dataset.on,i<3?"true":"false");
+});
+test("PV bars scale from zero through full scale, clamp over 100 percent",()=>{
+  const c=card(),h=hass();h.states["sensor.pv"].state="0";c.hass=h;
+  assert.equal(blueBars(c),0);
+  assert.equal(c.shadowRoot._pvPct.get("true")[0].textContent,"0 %");
+  h.states["sensor.pv"].state="1400";c.hass=h;
+  assert.equal(blueBars(c),1);
+  h.states["sensor.pv"].state="2800";c.hass=h;
+  assert.equal(blueBars(c),2);
+  h.states["sensor.pv"].state="4200";c.hass=h;
+  assert.equal(blueBars(c),3);
+  h.states["sensor.pv"].state="8400";c.hass=h;
+  assert.equal(blueBars(c),6);
+  assert.equal(c.shadowRoot._pvPct.get("true")[0].textContent,"100 %");
+  h.states["sensor.pv"].state="20000";c.hass=h;
+  assert.equal(blueBars(c),6);
+  assert.equal(c.shadowRoot._pvPct.get("true")[0].textContent,"100 %");
+});
+test("PV full scale follows the persisted slider and does not affect house balance",()=>{
+  const c=card(),h=hass();h.states["sensor.pv"].state="8400";
+  h.states["number.marstek_pv_manager_pv_anzeige_maximum"].state="14000";
+  c.hass=h;
+  assert.equal(blueBars(c),4);
+  assert.equal(c.shadowRoot._pvPct.get("true")[0].textContent,"60 %");
+  assert.equal(text(c,"pv"),"8.400 W");
+  const houseWatts=numberOfWatts(c,"house");
+  h.states["number.marstek_pv_manager_pv_anzeige_maximum"].state="8000";
+  c.hass=h;
+  assert.equal(blueBars(c),6);
+  assert.equal(c.shadowRoot._pvPct.get("true")[0].textContent,"100 %");
+  assert.equal(numberOfWatts(c,"house"),houseWatts);
+});
+test("PV bars use safe default when the new entity is missing; invalid PV displays unknown",()=>{
+  const c=card(),h=hass();h.states["sensor.pv"].state="4200";
+  delete h.states["number.marstek_pv_manager_pv_anzeige_maximum"];
+  c.hass=h;
+  assert.equal(blueBars(c),3);  // 8400 W fallback
+  h.states["sensor.pv"].state="unavailable";c.hass=h;
+  assert.equal(blueBars(c),0);
+  assert.equal(c.shadowRoot._pvPct.get("true")[0].textContent,"– %");
+  assert.equal(c.shadowRoot._notes.get("pv")[0].textContent,"Nicht verfügbar");
 });
