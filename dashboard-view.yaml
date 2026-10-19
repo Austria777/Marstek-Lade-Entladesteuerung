@@ -111,6 +111,15 @@ sections:
       marstek_soc: sensor.marstek_venus_modbus_soc_batterie
       necharge: sensor.necharge_ladeleistung
       delta: sensor.evcc_delta_ac_smart_wallbox_charge_power
+      pv_max: number.marstek_pv_manager_pv_anzeige_maximum
+  - type: custom:mushroom-number-card
+    entity: number.marstek_pv_manager_pv_anzeige_maximum
+    name: PV-Anzeige · 100 % bei
+    icon: mdi:signal
+    icon_color: blue
+    display_mode: slider
+    grid_options:
+      columns: full
 - type: grid
   cards:
   - type: heading
