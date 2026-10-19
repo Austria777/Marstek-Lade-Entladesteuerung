@@ -1,4 +1,4 @@
-/* Marstek Energy Flow Card 0.5.9 — PV + grid artwork, colored grid wave and clean house; display only. */
+/* Marstek Energy Flow Card 0.5.10 — glowing Smart Home heartbeat icon in Haus tile; display only. */
 (() => {
   'use strict';
   const DEFAULT = Object.freeze({
@@ -46,8 +46,6 @@
   }
   const format = (v) => v === null ? '–' : Math.round(Math.abs(v)).toLocaleString('de-AT');
   const esc = (x) => String(x).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-  const icon = {house:'⌂'};
-
   // Artwork built from resolution-independent SVG shapes matching the user's
   // sample tiles. No copied backgrounds, no extra www images or static readings.
   function pvIcon(){
@@ -79,15 +77,41 @@
     </g>`;
   }
 
-  function node(key,label,x,y,w,h) {
-    const cx=w/2;
-    return `<g class="node node-${key}" transform="translate(${x} ${y})">
+  // Smart Home heart-beat icon, based on selected design option 1.
+  // All graphic elements are inline SVG, so no additional image file is needed.
+  function houseNode(x,y,w,h,mobile=false){
+    const suffix=mobile?'mobile':'desktop';
+    const cy=h/2;
+    return `<g class="node node-house" transform="translate(${x} ${y})">
       <rect class="node-surface" width="${w}" height="${h}" rx="19"/>
-      <circle class="icon-disk" cx="27" cy="25" r="17"/>
-      <text class="node-icon" x="27" y="31" text-anchor="middle">${icon[key]}</text>
-      <text class="node-label" x="50" y="29">${label}</text>
-      <text class="node-power" data-value="${key}" x="${cx}" y="${h-24}"
-            text-anchor="middle">– W</text>
+      <defs>
+        <radialGradient id="house-disc-${suffix}" cx=".40" cy=".30" r=".74">
+          <stop stop-color="#65dfff" stop-opacity=".86"/>
+          <stop offset=".60" stop-color="#147cd5" stop-opacity=".87"/>
+          <stop offset="1" stop-color="#154b9e" stop-opacity=".94"/>
+        </radialGradient>
+        <linearGradient id="house-ring-${suffix}" x1="0" y1="0" x2="1" y2="1">
+          <stop stop-color="#e5fbff"/><stop offset=".56" stop-color="#46cfff"/>
+          <stop offset="1" stop-color="#9cdaff"/>
+        </linearGradient>
+      </defs>
+      <g class="smart-house-icon" data-house-icon="heartbeat" aria-hidden="true"
+         transform="translate(39 ${cy})">
+        <circle r="34" class="house-halo"/>
+        <circle r="30" fill="url(#house-disc-${suffix})"/>
+        <circle r="31" fill="none" stroke="url(#house-ring-${suffix})"
+                stroke-width="2.3"/>
+        <path d="M-20 -2L0 -21L20 -2 M-16 -5V17Q-16 21 -12 21H12
+                 Q16 21 16 17V-5 M11 -13V-21H17V-7"
+              fill="none" stroke="#fff" stroke-width="3.8"
+              stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M-11 6H-6L-2 -5L3 12L7 4H12"
+              fill="none" stroke="#fff" stroke-width="3"
+              stroke-linecap="round" stroke-linejoin="round"/>
+      </g>
+      <text class="node-label house-label" x="82" y="${cy-14}">Haus ≈</text>
+      <text class="node-power house-power" data-value="house"
+            x="82" y="${cy+19}" text-anchor="start">– W</text>
     </g>`;
   }
 
@@ -258,7 +282,7 @@
       ${Object.entries(paths).map(([k,p])=>link(k,p)).join('')}
       ${pvNode(...shapes.pv)}
       ${gridNode(...shapes.grid)}
-      ${node('house','Haus ≈',...shapes.house)}
+      ${houseNode(...shapes.house,mobile)}
       ${batteryNode('marstek','Marstek Battery',...shapes.marstek)}
       ${batteryNode('solax','SolaX Battery',...shapes.solax)}
       ${evNode('necharge','NeCharge · Model 3',...shapes.necharge,'tesla-model3-highland-stealth-grey.webp')}
@@ -303,8 +327,14 @@
     .node{filter:drop-shadow(0 4px 8px rgba(42,90,141,.12))}
     .node-surface{fill:rgba(239,248,255,.92);stroke:rgba(255,255,255,.98);
       stroke-width:2.2}
-    .node-house .node-surface{fill:rgba(227,251,255,.94);stroke:#3dc8f5;
-      stroke-width:2.5}
+    .node-house .node-surface{fill:rgba(235,248,255,.96);stroke:#83d3ff;
+      stroke-width:2.1}
+    .smart-house-icon{pointer-events:none;
+      filter:drop-shadow(0 0 5px rgba(41,189,248,.83))}
+    .house-halo{fill:rgba(85,195,255,.17);
+      stroke:rgba(204,246,255,.69);stroke-width:3.5}
+    .house-label{font-size:14px;fill:#1d456d;font-weight:750}
+    .node-house .house-power{font-size:24px;font-weight:820;fill:#092851}
     .node-label{font-family:inherit;fill:#264564;font-size:13px;font-weight:750}
     .node-power{font-family:inherit;fill:#072951;font-size:25px;font-weight:800}
     .node-note{font-family:inherit;fill:#43617f;font-size:11px;font-weight:640}
@@ -374,6 +404,8 @@
       .node-power{font-size:23px}
       .node-pv .node-power{font-size:20px}
       .node-grid .grid-power{font-size:23px}
+      .node-house .house-label{font-size:13px}
+      .node-house .house-power{font-size:22px}
       .node-label{font-size:12px}
       .node-note{font-size:10px}
       .soc-label{font-size:10px}
@@ -460,5 +492,5 @@
   }
   if(!customElements.get('marstek-energy-flow-card'))customElements.define('marstek-energy-flow-card',MarstekEnergyFlowCard);
   window.customCards=window.customCards||[];
-  window.customCards.push({type:'marstek-energy-flow-card',name:'Marstek Energiefluss',description:'PV-Sonnen-/Paneel-Icon, Strommast, dynamische grün-rote Netzwelle, Premium Live-Energiefluss'});
+  window.customCards.push({type:'marstek-energy-flow-card',name:'Marstek Energiefluss',description:'Smart-Home-Herzschlag-Icon, PV und Netzvisualisierung mit Live-Energiedaten'});
 })();
