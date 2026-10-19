@@ -1,3 +1,36 @@
+# Marstek Energy Studio v0.5.10 – Smart-Home-Herzschlag-Symbol
+
+Das bisherige einfache **Haus-Symbol** wurde nach der gemeinsam
+ausgewählten **Bildvariante 1** durch ein moderneres inline-SVG-Symbol
+ersetzt: Links im Haus-Kästchen sitzt nun eine blau-cyan leuchtende
+Glaskugel mit einer weißen Hauskontur und einer **Energie-Pulslinie**
+im Inneren. Rechts davon stehen nach wie vor **Haus ≈** und
+der **aktuelle Live-Leistungswert in W**. Es gibt weiterhin **keine**
+Zeile „Bilanz-Schätzwert“.
+
+- Neue Haus-Illustration auf PC **und** Smartphone sichtbar, scharf
+  skalierbar, ohne separate Bilddateien.
+- Transparenter heller Kartenhintergrund, dezenter neonblauer Glow.
+- Kein Pseudo-Puls-Sensor: die Linie im Hausicon ist nur ein
+  gestalterisches Symbol, **nicht** eine zusätzliche Messung.
+- PV-Kästchen mit PV/Sonne, Strommast mit grün/roter Welle,
+  Batterie-SoC, Hausfoto und Tesla-Knoten bleiben unverändert.
+- Keine Änderung an Sensoren, Hausbilanz oder an den Lade-/Entlade-
+  und Nachtladeautomatiken.
+
+**Installation:**
+
+1. HACS auf **v0.5.10** aktualisieren, Home Assistant neu starten.
+2. Die aktuelle GitHub-Datei `www/marstek-energy-flow-card.js`
+   in den HA-Konfigurationsordner `www` kopieren und die alte
+   JavaScript-Datei ersetzen.
+3. Unter **Einstellungen → Dashboards → Ressourcen** die
+   bestehende JavaScript-Modul-URL auf
+   `/local/marstek-energy-flow-card.js?v=0510` ändern.
+4. Dashboard im Chrome mit **Strg+F5** neu laden.
+   Dashboard-YAML und die vorhandenen Tesla-Bilddateien
+   bleiben unverändert.
+
 # Marstek Energy Studio v0.5.9 – PV-/Netzsymbole und dynamische Netzwelle
 
 **Neue Darstellung der Live-Energiefluss-Karte:** Die beiden
