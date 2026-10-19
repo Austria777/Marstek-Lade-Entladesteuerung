@@ -1,3 +1,69 @@
+# Marstek Energy Studio v0.5.11 – Dynamische PV-Signalbalken
+
+**PV gesamt:** Die bisherigen dekorativen Balken sind durch **6 echte
+Leistungsstufen** wie bei der Handy-Empfangsanzeige ersetzt. Jeder Balken
+ist vollständig **blau oder grau** (kein teilweises Füllen).
+Die **aktuelle PV-Auslastung in %** wird zusätzlich direkt im PV-Kästchen
+angezeigt. Die Balken haben einen dezenten Leuchteffekt, sofern der
+Browser keine reduzierte Animation bevorzugt.
+
+Berechnung: `Prozent = min(100, PV-Leistung / eingestelltes Maximum × 100)`.
+Bei 0 W sind alle 6 Balken grau, bei 100 % sind alle 6 blau.
+Die Zahl leuchtender Balken wird auf die nächste Stufe **aufgerundet**.
+Ein fehlender PV-Sensor zeigt `– %` und nur graue Balken; Leistungen über
+dem eingestellten Maximum bleiben bei 100 % stehen.
+
+Der neue persistente Home-Assistant-Regler ist:
+`number.marstek_pv_manager_pv_anzeige_maximum`.
+
+- **8.000–14.000 W** in **100-W-Schritten**; Anfangswert **8.400 W**.
+- Im Dashboard ist der Regler als **separate Mushroom-Slider-Karte direkt
+  unter der Energiefluss-Grafik** angeordnet. Beide Dashboard-Dateien
+  (`dashboard.yaml`, `dashboard-view.yaml`) wurden angepasst.
+- Der Schieberegler ändert **ausschließlich die optische PV-Skala**.
+  Weder die tatsächliche PV-Produktion noch die Marstek-/SolaX-
+  Steuerung, Lade-/Entladegrenzen oder Wallboxen werden verändert.
+- Bestehende Installationen ohne die neue Entität zeigen zunächst
+  den sicheren Default 8.400 W; PV-Live-Wert bleibt unverändert.
+- Das restliche Layout, realistische Hausfoto (Blur 7/12 px),
+  Smart-Home-Icon, Netz-Welle, Batteriekarten und Tesla-Bilder bleiben
+  wie in v0.5.10.
+
+**Installation:**
+
+1. In HACS auf **v0.5.11** aktualisieren und Home Assistant neu starten.
+   Unter *Entwicklerwerkzeuge → Zustände* prüfen, ob die neue
+   `number.marstek_pv_manager_pv_anzeige_maximum` vorhanden ist.
+2. JavaScript-Datei `www/marstek-energy-flow-card.js` aus GitHub nach
+   `/config/www/marstek-energy-flow-card.js` kopieren.
+3. Unter *Einstellungen → Dashboards → Ressourcen* auf
+   `/local/marstek-energy-flow-card.js?v=0511` (JavaScript-Modul)
+   wechseln und den Browser per Strg+F5 neu laden.
+4. **Eigene Slider-Karte unter dem Flow ergänzen:** Die aktualisierten
+   Dashboard-YAML-Dateien enthalten sie bereits. Wenn du dein bestehendes
+   Dashboard behalten möchtest, **nur** diese neue Karte direkt nach
+   `type: custom:marstek-energy-flow-card` (auf der Ebene der Karten)
+   einfügen:
+
+   ```yaml
+   - type: custom:mushroom-number-card
+     entity: number.marstek_pv_manager_pv_anzeige_maximum
+     name: PV-Anzeige · 100 % bei
+     icon: mdi:signal
+     icon_color: blue
+     display_mode: slider
+     grid_options:
+       columns: full
+   ```
+
+   Im Energy-Flow-Kartenabschnitt kann optional
+   `pv_max: number.marstek_pv_manager_pv_anzeige_maximum`
+   ergänzt werden; die neue Karten-JS verwendet diesen Entity-Namen
+   auch ohne YAML-Änderung automatisch als Standard.
+
+Wichtig: Die Beispiel-% in der Vorschau beziehen sich immer auf den
+**gewählten Anzeigemaßstab**, nicht auf die installierte Modulleistung.
+
 # Marstek Energy Studio v0.5.10 – Smart-Home-Herzschlag-Symbol
 
 Das bisherige einfache **Haus-Symbol** wurde nach der gemeinsam

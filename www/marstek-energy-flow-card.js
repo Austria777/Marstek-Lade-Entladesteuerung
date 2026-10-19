@@ -1,8 +1,9 @@
-/* Marstek Energy Flow Card 0.5.10 — glowing Smart Home heartbeat icon in Haus tile; display only. */
+/* Marstek Energy Flow Card 0.5.11 — six live PV signal bars with stored 8000–14000 W full-scale; visual only. */
 (() => {
   'use strict';
   const DEFAULT = Object.freeze({
     pv: ['sensor.pv_leistung_gesamt'],
+    pv_max: 'number.marstek_pv_manager_pv_anzeige_maximum',
     grid: 'sensor.solax_m_measured_power',
     marstek: 'sensor.marstek_venus_modbus_ac_leistung',
     solax: 'sensor.solax_m_battery_power_charge',
@@ -115,21 +116,27 @@
     </g>`;
   }
 
+  // Six discrete 'mobile signal' bars: every bar is either fully blue or grey.
+  // The watt value and percentage remain real measurements, not time-series art.
   function pvNode(x,y,w,h){
     const cx=(w+60)/2;
-    const start=w-34;
-    const bars=[9,15,21,26,31];
+    const heights=[7,11,15,19,23,27];
+    const start=w-40;
     return `<g class="node node-pv" transform="translate(${x} ${y})">
       <rect class="node-surface" width="${w}" height="${h}" rx="19"/>
       <g transform="translate(7 9) scale(.89)">${pvIcon()}</g>
       <text class="node-label" x="63" y="26">PV gesamt</text>
-      <text class="node-power" data-value="pv" x="${cx}" y="60" text-anchor="middle">– W</text>
-      <text class="node-note" data-note="pv" x="${cx}" y="79" text-anchor="middle">Keine Messwerte</text>
-      <g class="pv-spark-bars" aria-hidden="true">
-        ${bars.map((height,i)=>
-          `<rect x="${start+i*6}" y="${38-height}" width="4" height="${height}" rx="1"
-            fill="#1da3f4" opacity="${.3+i*.14}"/>`).join('')}
+      <text class="node-power" data-value="pv" x="${cx}" y="60"
+            text-anchor="middle">– W</text>
+      <text class="node-note" data-note="pv" x="80" y="${h-13}"
+            text-anchor="middle">Keine Messwerte</text>
+      <g class="pv-spark-bars" aria-label="PV-Auslastung: sechs Stufen">
+        ${heights.map((height,i)=>
+          `<rect class="pv-signal-bar" data-pv-bar="${i}" data-on="false"
+            x="${start+i*6}" y="${41-height}" width="4" height="${height}" rx="1.2"/>`).join('')}
       </g>
+      <text class="pv-percent" data-pv-pct="true" x="${w-8}" y="${h-13}"
+            text-anchor="end">– %</text>
     </g>`;
   }
 
@@ -342,7 +349,15 @@
     .icon-disk{fill:currentColor;opacity:.14}
     .node-pv{color:#e4a11c}.node-grid{color:#168ee2}.node-house{color:#08acd3}
     .pv-illustration,.grid-tower-art{pointer-events:none}
-    .pv-spark-bars{opacity:.82}
+    .pv-spark-bars{pointer-events:none}
+    .pv-signal-bar{fill:#b5c5d2;transition:fill .3s ease,filter .3s ease}
+    .pv-signal-bar[data-on='true']{fill:#219ef0;
+      filter:drop-shadow(0 0 2px rgba(32,157,237,.72));
+      animation:pv-signal-glow 2.2s ease-in-out infinite alternate}
+    .pv-percent{font-family:inherit;font-size:12px;font-weight:800;fill:#137acc}
+    @keyframes pv-signal-glow{
+      to{filter:drop-shadow(0 0 4px rgba(22,154,255,.94))}
+    }
     .node-pv .node-power{font-size:22px}
     .node-grid .grid-power{font-size:25px}
     .node-grid .grid-status{font-weight:700}
@@ -403,6 +418,7 @@
       .diagram.mobile{display:block;max-width:420px}
       .node-power{font-size:23px}
       .node-pv .node-power{font-size:20px}
+      .pv-percent{font-size:11px}
       .node-grid .grid-power{font-size:23px}
       .node-house .house-label{font-size:13px}
       .node-house .house-power{font-size:22px}
@@ -419,6 +435,7 @@
       .wire[data-direction='off'] .pulse{opacity:0}
       .soc-fill{transition:none}
       .wave-stroke{animation:none!important}
+      .pv-signal-bar{animation:none!important;transition:none}
     }
   `;
   class MarstekEnergyFlowCard extends HTMLElement {
@@ -458,6 +475,20 @@
         }
         for(const el of this.shadowRoot.querySelectorAll(`[data-note="${k}"]`))el.textContent=status[k];
       }
+      // Display-only PV utilisation. Fallback scale 8400 W for older installs
+      // without the new Number entity; never changes the power controller.
+      const rawPvMax = numeric(this._hass,this._conf.entities.pv_max);
+      const pvMax = rawPvMax!==null && rawPvMax>=8000 && rawPvMax<=14000
+        ? rawPvMax : 8400;
+      const pvPct = d.pv===null ? null :
+        Math.max(0, Math.min(100,100*d.pv/pvMax));
+      const pvBars = pvPct===null ? 0 :
+        Math.max(0,Math.min(6,Math.ceil(pvPct*6/100-1e-9)));
+      for(const el of this.shadowRoot.querySelectorAll('[data-pv-pct="true"]'))
+        el.textContent=pvPct===null?'– %':`${Math.round(pvPct)} %`;
+      for(let i=0;i<6;i++)
+        for(const el of this.shadowRoot.querySelectorAll(`[data-pv-bar="${i}"]`))
+          el.dataset.on=String(i<pvBars);
       // One measured grid sensor drives the figure, label and dynamic wave.
       const gridWaveState=d.grid===null?'missing':d.grid>0?'export':d.grid<0?'import':'neutral';
       for(const el of this.shadowRoot.querySelectorAll('[data-grid-wave="true"]'))
@@ -492,5 +523,5 @@
   }
   if(!customElements.get('marstek-energy-flow-card'))customElements.define('marstek-energy-flow-card',MarstekEnergyFlowCard);
   window.customCards=window.customCards||[];
-  window.customCards.push({type:'marstek-energy-flow-card',name:'Marstek Energiefluss',description:'Smart-Home-Herzschlag-Icon, PV und Netzvisualisierung mit Live-Energiedaten'});
+  window.customCards.push({type:'marstek-energy-flow-card',name:'Marstek Energiefluss',description:'Sechs stufige PV-Auslastungsbalken, Smart-Home-Icon und dynamischer Netzfluss'});
 })();
