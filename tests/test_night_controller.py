@@ -311,3 +311,34 @@ class ConfigurableNightControllerTests(unittest.IsolatedAsyncioTestCase):
         await c.async_tick()
         self.assertTrue(c._night_active)
         self.assertEqual(hass._states[const.ENTITY_FIELDS["charge_setpoint"][0]].state, "400")
+
+
+class PVDisplayScaleTests(unittest.IsolatedAsyncioTestCase):
+    """PV scale must persist while remaining entirely separate from battery control."""
+
+    async def test_8400_default_and_saved_value_with_no_hardware_calls(self):
+        hass, controller = setup(soc=50, night_enabled=False, main_enabled=True)
+        self.assertEqual(controller.requested_pv_display_max(), 8400)
+        original_settings = controller.settings()
+        notifications = []
+        controller.subscribe(lambda: notifications.append(True))
+        initial_tasks = len(hass.tasks)
+        await controller.async_set_pv_display_max(12500)
+        self.assertEqual(controller.entry.options["pv_display_max_w"], 12500)
+        self.assertEqual(controller.requested_pv_display_max(), 12500)
+        self.assertEqual(len(notifications), 1)
+        self.assertEqual(len(hass.tasks), initial_tasks)
+        self.assertEqual(hass.calls, [])
+        self.assertEqual(controller.settings(), original_settings)
+
+        reboot = module.MarstekController(hass, controller.entry)
+        self.assertEqual(reboot.requested_pv_display_max(), 12500)
+
+    async def test_invalid_values_rejected_without_writing(self):
+        hass, controller = setup(soc=50, night_enabled=False, main_enabled=True)
+        for value in (0, 7900, 8010, 14001, 140100):
+            with self.assertRaises(module.HomeAssistantError):
+                await controller.async_set_pv_display_max(value)
+        self.assertNotIn("pv_display_max_w", controller.entry.options)
+        self.assertEqual(hass.calls, [])
+        self.assertEqual(hass.tasks, [])
