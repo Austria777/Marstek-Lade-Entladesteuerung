@@ -92,6 +92,27 @@ class MarstekController:
             values["max_discharge_w"] = min(values["max_discharge_w"], discharge_cap)
         return Settings(**values)
 
+    def requested_pv_display_max(self) -> int:
+        """Only the dashboard PV signal full-scale: not a charging power limit."""
+        raw = self.entry.options.get("pv_display_max_w", DEFAULTS["pv_display_max_w"])
+        try:
+            value = int(raw)
+        except (TypeError, ValueError):
+            return 8400
+        return max(8000, min(14000, value))
+
+    async def async_set_pv_display_max(self, value: int) -> None:
+        """Persist display preference without triggering any physical control cycle."""
+        if not 8000 <= value <= 14000 or value % 100:
+            raise HomeAssistantError("PV-Anzeige Maximum: 8000–14000 W in 100-W-Schritten")
+        if self.requested_pv_display_max() == value:
+            return
+        self.hass.config_entries.async_update_entry(
+            self.entry, options={**self.entry.options, "pv_display_max_w": value}
+        )
+        for listener in list(self._listeners):
+            listener()
+
     def requested_emergency_soc_target(self) -> int:
         return max(50, min(100, int(self.entry.options.get(
             "emergency_soc_target", DEFAULTS["emergency_soc_target"]))))
