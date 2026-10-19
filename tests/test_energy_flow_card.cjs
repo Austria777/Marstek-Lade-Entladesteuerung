@@ -10,7 +10,7 @@ global.customElements={
 };
 class StubElement {
   attachShadow(){
-    const values=new Map(),notes=new Map(),flows=new Map(),vehicles=new Map(),soc=new Map(),socBars=new Map(),single=new Map();
+    const values=new Map(),notes=new Map(),flows=new Map(),vehicles=new Map(),soc=new Map(),socBars=new Map(),gridWave=new Map(),single=new Map();
     const items=(map,k)=>{
       if(!map.has(k)) map.set(k,Array.from({length:2},()=>({
         textContent:"",dataset:{},attributes:{},
@@ -26,12 +26,12 @@ class StubElement {
         return single.get(selector);
       },
       querySelectorAll(selector) {
-        const m=selector.match(/^\[data-(value|note|flow|ev|soc|soc-bar)="([^"]+)"\]$/);
+        const m=selector.match(/^\[data-(value|note|flow|ev|soc|soc-bar|grid-wave)="([^"]+)"\]$/);
         if(!m)return [];
-        const source={value:values,note:notes,flow:flows,ev:vehicles,soc,"soc-bar":socBars}[m[1]];
+        const source={value:values,note:notes,flow:flows,ev:vehicles,soc,"soc-bar":socBars,"grid-wave":gridWave}[m[1]];
         return items(source,m[2]);
       },
-      _values:values,_notes:notes,_flows:flows,_vehicles:vehicles,_soc:soc,_socBars:socBars
+      _values:values,_notes:notes,_flows:flows,_vehicles:vehicles,_soc:soc,_socBars:socBars,_gridWave:gridWave
     };
     return this.shadowRoot;
   }
@@ -175,4 +175,44 @@ test("Variant B uses a realistic external house photo, adaptive blur and real da
   c.hass=hass("1100","1.2");
   assert.equal(numberOfWatts(c,"delta"),1200);
   assert.equal(numberOfWatts(c,"house"),4500);
+});
+
+test("user-supplied PV and power-grid design references are reflected in both layouts",()=>{
+  const c=card(),markup=c.shadowRoot.innerHTML;
+  assert.equal((markup.match(/class="pv-illustration"/g)||[]).length,2);
+  assert.equal((markup.match(/class="grid-tower-art"/g)||[]).length,2);
+  assert.equal((markup.match(/class="pv-spark-bars"/g)||[]).length,2);
+  assert.equal((markup.match(/class="grid-wave"/g)||[]).length,2);
+  assert.equal((markup.match(/data-grid-wave="true"/g)||[]).length,2);
+  assert.doesNotMatch(markup,/Bilanz-Schätzwert/);
+  assert.doesNotMatch(markup,/data-note="house"/);
+  assert.match(markup,/Haus ≈/);
+  assert.match(markup,/\.grid-wave\[data-state='export'\]\{color:#0cbd78/);
+  assert.match(markup,/\.grid-wave\[data-state='import'\]\{color:#e7464b/);
+});
+test("grid injection, consumption, neutral and unavailable select matching wave colors",()=>{
+  const c=card(),h=hass();
+  c.hass=h;
+  assert.equal(c.shadowRoot._gridWave.get("true")[0].dataset.state,"export");
+  assert.equal(c.shadowRoot._notes.get("grid")[0].textContent,"Einspeisung");
+  h.states["sensor.grid"].state="-250";c.hass=h;
+  assert.equal(c.shadowRoot._gridWave.get("true")[0].dataset.state,"import");
+  assert.equal(c.shadowRoot._gridWave.get("true")[1].dataset.state,"import");
+  assert.equal(c.shadowRoot._notes.get("grid")[0].textContent,"Netzbezug");
+  h.states["sensor.grid"].state="0";c.hass=h;
+  assert.equal(c.shadowRoot._gridWave.get("true")[0].dataset.state,"neutral");
+  assert.equal(c.shadowRoot._notes.get("grid")[0].textContent,"Ausgeglichen");
+  h.states["sensor.grid"].state="unavailable";c.hass=h;
+  assert.equal(c.shadowRoot._gridWave.get("true")[0].dataset.state,"missing");
+  assert.equal(c.shadowRoot._notes.get("grid")[0].textContent,"Nicht verfügbar");
+  assert.equal(text(c,"grid"),"– W");
+});
+test("small nonzero grid power uses exact sign for both status and waveform",()=>{
+  const c=card(),h=hass();
+  h.states["sensor.grid"].state="1";c.hass=h;
+  assert.equal(c.shadowRoot._gridWave.get("true")[0].dataset.state,"export");
+  assert.equal(c.shadowRoot._notes.get("grid")[0].textContent,"Einspeisung");
+  h.states["sensor.grid"].state="-1";c.hass=h;
+  assert.equal(c.shadowRoot._gridWave.get("true")[0].dataset.state,"import");
+  assert.equal(c.shadowRoot._notes.get("grid")[0].textContent,"Netzbezug");
 });
