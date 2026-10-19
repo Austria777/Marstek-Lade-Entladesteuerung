@@ -216,3 +216,25 @@ test("small nonzero grid power uses exact sign for both status and waveform",()=
   assert.equal(c.shadowRoot._gridWave.get("true")[0].dataset.state,"import");
   assert.equal(c.shadowRoot._notes.get("grid")[0].textContent,"Netzbezug");
 });
+
+test("new cyan-glow Smart Home heartbeat icon replaces old house glyph on PC and phone",()=>{
+  const c=card(),html=c.shadowRoot.innerHTML;
+  assert.equal((html.match(/data-house-icon="heartbeat"/g)||[]).length,2);
+  assert.equal((html.match(/class="house-halo"/g)||[]).length,2);
+  assert.equal((html.match(/class="node-power house-power"/g)||[]).length,2);
+  assert.match(html,/house-disc-desktop/);
+  assert.match(html,/house-disc-mobile/);
+  assert.match(html,/smart-house-icon\{pointer-events:none/);
+  assert.match(html,/rgba\(41,189,248,\.83\)/);
+  assert.doesNotMatch(html,/class="node-icon"/);
+  assert.doesNotMatch(html,/Bilanz-Schätzwert/);
+});
+test("house icon does not alter live power calculation or other flow statuses",()=>{
+  const c=card();c.hass=hass("900","2.5");
+  assert.equal(numberOfWatts(c,"house"),4500);
+  assert.equal(numberOfWatts(c,"pv"),7000);
+  assert.equal(c.shadowRoot._gridWave.get("true")[0].dataset.state,"export");
+  assert.equal(state(c,"necharge"),"active");
+  assert.equal(state(c,"delta"),"active");
+  assert.equal(c.shadowRoot._soc.get("marstek_soc")[0].textContent,"SoC 80 %");
+});
