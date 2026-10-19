@@ -63,6 +63,7 @@ PARAMETERS: dict[str, tuple[int, int, int]] = {
 DEFAULTS: dict[str, str | int | bool] = {
     **{key: item[0] for key, item in ENTITY_FIELDS.items()},
     **{key: values[0] for key, values in PARAMETERS.items()},
+    "pv_display_max_w": 8400,  # display scale only; never caps power hardware
     "enabled": False,
     "night_enabled": False,
     "sync_charge_limit": False,  # opt-in only, never raise hardware limits on upgrade
