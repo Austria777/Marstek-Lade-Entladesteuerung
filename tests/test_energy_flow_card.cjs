@@ -282,7 +282,7 @@ test("PV full scale follows the persisted slider and does not affect house balan
   c.hass=h;
   assert.equal(blueBars(c),4);
   assert.equal(c.shadowRoot._pvPct.get("true")[0].textContent,"60 %");
-  assert.equal(text(c,"pv"),"8.400 W");
+  assert.equal(numberOfWatts(c,"pv"),8400); // locale grouping may be a narrow no-break space
   const houseWatts=numberOfWatts(c,"house");
   h.states["number.marstek_pv_manager_pv_anzeige_maximum"].state="8000";
   c.hass=h;
