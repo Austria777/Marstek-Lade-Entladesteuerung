@@ -103,7 +103,7 @@
       <text class="node-note" data-note="pv" x="${cx}" y="79" text-anchor="middle">Keine Messwerte</text>
       <g class="pv-spark-bars" aria-hidden="true">
         ${bars.map((height,i)=>
-          `<rect x="${start+i*6}" y="${46-height}" width="4" height="${height}" rx="1"
+          `<rect x="${start+i*6}" y="${38-height}" width="4" height="${height}" rx="1"
             fill="#1da3f4" opacity="${.3+i*.14}"/>`).join('')}
       </g>
     </g>`;
@@ -111,16 +111,16 @@
 
   function gridNode(x,y,w,h){
     // Keep the wave below the status line, within the rounded tile bounds.
-    const bottom=h-5,mid=h-17,end=w-12;
-    const d=`M12 ${mid} C30 ${mid-10}, 44 ${mid-13}, 63 ${mid-2}
-      S94 ${mid+7}, 111 ${mid-2} S142 ${mid-12}, ${end} ${mid-1}`;
+    const bottom=h-4,mid=h-14,end=w-12;
+    const d=`M12 ${mid} C30 ${mid-6}, 44 ${mid-7}, 63 ${mid-2}
+      S94 ${mid+3}, 111 ${mid-2} S142 ${mid-7}, ${end} ${mid-1}`;
     return `<g class="node node-grid" transform="translate(${x} ${y})">
       <rect class="node-surface" width="${w}" height="${h}" rx="19"/>
       <g transform="translate(9 6) scale(.90)">${gridTowerIcon()}</g>
       <text class="node-label" x="70" y="26">Stromnetz</text>
       <text class="node-power grid-power" data-value="grid" x="70" y="59"
             text-anchor="start">– W</text>
-      <text class="node-note grid-status" data-note="grid" x="70" y="77"
+      <text class="node-note grid-status" data-note="grid" x="70" y="73"
             text-anchor="start">Keine Messwerte</text>
       <g class="grid-wave" data-grid-wave="true" data-state="neutral" aria-hidden="true">
         <path class="wave-fill" d="${d} L${end} ${bottom} H12Z"/>
