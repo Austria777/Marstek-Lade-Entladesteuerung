@@ -1,3 +1,43 @@
+# Marstek Energy Studio v0.5.9 – PV-/Netzsymbole und dynamische Netzwelle
+
+**Neue Darstellung der Live-Energiefluss-Karte:** Die beiden
+Referenzbilder für die Kästchen `PV gesamt` und `Stromnetz` dienen
+als Vorlage für neue, skalierbare, direkt in die JavaScript-Karte
+eingebaute **SVG-Grafiken** – keine weiteren Bilddateien erforderlich.
+
+- **PV gesamt:** Blaues PV-Modul mit gelber Sonne links,
+  rechts oben kleine hellblaue Mini-Leistungsbalken.
+- **Stromnetz:** Blauer Strommast als große Illustration links;
+  darunter eine farbige, dezent pulsierende Welle.
+  - Echter Netzfluss `sensor.solax_m_measured_power > 0`:
+    **grüne Welle / Einspeisung**.
+  - Netzfluss `< 0`: **rote Welle / Netzbezug**.
+  - Genau `0`: hellblaue neutrale Welle / Ausgeglichen.
+  - Sensor `unknown` oder `unavailable`: dezente neutrale
+    Welle und klarer Status **Nicht verfügbar**.
+- **Haus:** Nur noch **Haus ≈** und der berechnete Live-Leistungswert;
+  der bisherige Hinweis **Bilanz-Schätzwert** im Kasten entfällt.
+- Gleiches Layout auf **Desktop und Smartphone**; das PV-Mini-Diagramm
+  ist rein dekorativ und zeigt bewusst keine fiktiven Zeitreihen.
+- Der Blur des realistischen Hausfotos bleibt bei **7 px Desktop /
+  12 px Mobile**.
+- Keine Änderung an SolaX-/Marstek-SoC, Batteriekarten, Teslas,
+  Netzbilanz oder an den Lade-, Entlade-, Notfall- oder
+  Nachtlade-Automationen.
+
+**Installation:**
+
+1. In HACS die Version **v0.5.9** installieren und Home Assistant
+   neu starten (für die Versionsanzeige).
+2. Die aktualisierte Datei `www/marstek-energy-flow-card.js`
+   aus GitHub in `/config/www/marstek-energy-flow-card.js`
+   kopieren; bisherige Datei ersetzen.
+3. Home Assistant **Einstellungen → Dashboards → Ressourcen**:
+   Ressource als JavaScript-Modul auf
+   `/local/marstek-energy-flow-card.js?v=059` setzen.
+4. Chrome oder anderen Browser mit **Strg+F5** neu laden.
+   Dashboard-YAML, Hausfoto und Tesla-Bilddateien bleiben unverändert.
+
 # Marstek Energy Studio v0.5.8 – Variante B: realistisches Haus mit mittlerer Unschärfe
 
 Diese Version korrigiert **ausschließlich den Hintergrund** des Energieflusses:
