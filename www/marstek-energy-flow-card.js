@@ -1,4 +1,4 @@
-/* Marstek Energy Flow Card 0.5.8 — Variante B: realistic photo, 7px desktop / 12px mobile blur; display only. */
+/* Marstek Energy Flow Card 0.5.9 — PV + grid artwork, colored grid wave and clean house; display only. */
 (() => {
   'use strict';
   const DEFAULT = Object.freeze({
@@ -46,10 +46,39 @@
   }
   const format = (v) => v === null ? '–' : Math.round(Math.abs(v)).toLocaleString('de-AT');
   const esc = (x) => String(x).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-  const icon = {
-    pv: '☀', grid:'↟',house:'⌂',marstek:'▰',solax:'▰'
-  };
-  // Simple PV, grid and house nodes, all values are updated from HA sensors.
+  const icon = {house:'⌂'};
+
+  // Artwork built from resolution-independent SVG shapes matching the user's
+  // sample tiles. No copied backgrounds, no extra www images or static readings.
+  function pvIcon(){
+    return `<g class="pv-illustration" aria-hidden="true" pointer-events="none">
+      <g stroke="#f3b51a" stroke-width="1.65" stroke-linecap="round">
+        <path d="M35 9V4 M35 31V36 M22 22H17 M48 22H53
+                 M26 13L22 9 M44 31L48 35 M26 31L22 35 M44 13L48 9"/>
+      </g>
+      <circle cx="35" cy="22" r="8.7" fill="#ffca35" stroke="#efa900" stroke-width="1.1"/>
+      <path d="M9 39H46L56 66H1Z" fill="url(#pv-module-blue)" stroke="#4ba6eb" stroke-width="1.2"/>
+      <path d="M21 39L15 66 M33 39L34 66 M43 39L51 66
+              M6 49H49 M4 57H53" fill="none" stroke="#a1d4ff" stroke-width="1.25" opacity=".94"/>
+      <path d="M0 67H56" stroke="#476e9a" stroke-width="2" stroke-linecap="round"/>
+    </g>`;
+  }
+
+  function gridTowerIcon(){
+    return `<g class="grid-tower-art" aria-hidden="true" pointer-events="none"
+        fill="none" stroke="#2173be" stroke-width="2.35" stroke-linejoin="round"
+        stroke-linecap="round">
+      <path d="M30 5V74 M30 5L7 74 M30 5L53 74 M7 74H53
+               M19 40H41 M13 56H47 M10 68H50"/>
+      <path d="M24 19H36 L50 27H10Z M19 34H41L54 41H6Z
+               M16 49H44 M26 11H34" stroke-width="2.9"/>
+      <path d="M24 19L36 34 M36 19L24 34 M19 34L41 49
+               M41 34L19 49 M16 49L44 68 M44 49L16 68"
+            stroke-width="1.5" opacity=".92"/>
+      <path d="M30 5L30 0 M20 12H40" stroke="#4d93d0" stroke-width="1.5"/>
+    </g>`;
+  }
+
   function node(key,label,x,y,w,h) {
     const cx=w/2;
     return `<g class="node node-${key}" transform="translate(${x} ${y})">
@@ -57,10 +86,46 @@
       <circle class="icon-disk" cx="27" cy="25" r="17"/>
       <text class="node-icon" x="27" y="31" text-anchor="middle">${icon[key]}</text>
       <text class="node-label" x="50" y="29">${label}</text>
-      <text class="node-power" data-value="${key}" x="${cx}" y="${h-31}"
-        text-anchor="middle">– W</text>
-      <text class="node-note" data-note="${key}" x="${cx}" y="${h-12}"
-        text-anchor="middle">Keine Messwerte</text>
+      <text class="node-power" data-value="${key}" x="${cx}" y="${h-24}"
+            text-anchor="middle">– W</text>
+    </g>`;
+  }
+
+  function pvNode(x,y,w,h){
+    const cx=(w+60)/2;
+    const start=w-34;
+    const bars=[9,15,21,26,31];
+    return `<g class="node node-pv" transform="translate(${x} ${y})">
+      <rect class="node-surface" width="${w}" height="${h}" rx="19"/>
+      <g transform="translate(7 9) scale(.89)">${pvIcon()}</g>
+      <text class="node-label" x="63" y="26">PV gesamt</text>
+      <text class="node-power" data-value="pv" x="${cx}" y="60" text-anchor="middle">– W</text>
+      <text class="node-note" data-note="pv" x="${cx}" y="79" text-anchor="middle">Keine Messwerte</text>
+      <g class="pv-spark-bars" aria-hidden="true">
+        ${bars.map((height,i)=>
+          `<rect x="${start+i*6}" y="${46-height}" width="4" height="${height}" rx="1"
+            fill="#1da3f4" opacity="${.3+i*.14}"/>`).join('')}
+      </g>
+    </g>`;
+  }
+
+  function gridNode(x,y,w,h){
+    // Keep the wave below the status line, within the rounded tile bounds.
+    const bottom=h-5,mid=h-17,end=w-12;
+    const d=`M12 ${mid} C30 ${mid-10}, 44 ${mid-13}, 63 ${mid-2}
+      S94 ${mid+7}, 111 ${mid-2} S142 ${mid-12}, ${end} ${mid-1}`;
+    return `<g class="node node-grid" transform="translate(${x} ${y})">
+      <rect class="node-surface" width="${w}" height="${h}" rx="19"/>
+      <g transform="translate(9 6) scale(.90)">${gridTowerIcon()}</g>
+      <text class="node-label" x="70" y="26">Stromnetz</text>
+      <text class="node-power grid-power" data-value="grid" x="70" y="59"
+            text-anchor="start">– W</text>
+      <text class="node-note grid-status" data-note="grid" x="70" y="77"
+            text-anchor="start">Keine Messwerte</text>
+      <g class="grid-wave" data-grid-wave="true" data-state="neutral" aria-hidden="true">
+        <path class="wave-fill" d="${d} L${end} ${bottom} H12Z"/>
+        <path class="wave-stroke" d="${d}"/>
+      </g>
     </g>`;
   }
 
@@ -179,6 +244,10 @@
           <stop stop-color="#fff"/><stop offset=".72" stop-color="#ecf2fa"/>
           <stop offset="1" stop-color="#afc0d4"/>
         </linearGradient>
+        <linearGradient id="pv-module-blue" x1="0" x2="1" y1="0" y2="1">
+          <stop stop-color="#30a2fa"/><stop offset=".58" stop-color="#1761d5"/>
+          <stop offset="1" stop-color="#103b9d"/>
+        </linearGradient>
         <radialGradient id="glow-${mobile?'m':'d'}">
           <stop stop-color="#28e1b3" stop-opacity=".14"/>
           <stop offset="1" stop-color="#28e1b3" stop-opacity="0"/>
@@ -187,8 +256,8 @@
       <circle cx="${mobile?185:430}" cy="${mobile?343:231}" r="${mobile?164:194}"
               fill="url(#glow-${mobile?'m':'d'})"/>
       ${Object.entries(paths).map(([k,p])=>link(k,p)).join('')}
-      ${node('pv','PV gesamt',...shapes.pv)}
-      ${node('grid','Stromnetz',...shapes.grid)}
+      ${pvNode(...shapes.pv)}
+      ${gridNode(...shapes.grid)}
       ${node('house','Haus ≈',...shapes.house)}
       ${batteryNode('marstek','Marstek Battery',...shapes.marstek)}
       ${batteryNode('solax','SolaX Battery',...shapes.solax)}
@@ -242,6 +311,24 @@
     .node-icon{font-family:inherit;fill:currentColor;font-size:22px;font-weight:750}
     .icon-disk{fill:currentColor;opacity:.14}
     .node-pv{color:#e4a11c}.node-grid{color:#168ee2}.node-house{color:#08acd3}
+    .pv-illustration,.grid-tower-art{pointer-events:none}
+    .pv-spark-bars{opacity:.82}
+    .node-pv .node-power{font-size:22px}
+    .node-grid .grid-power{font-size:25px}
+    .node-grid .grid-status{font-weight:700}
+    .grid-wave{color:#9ab6c8;opacity:.47;pointer-events:none}
+    .grid-wave[data-state='export']{color:#0cbd78;opacity:1}
+    .grid-wave[data-state='import']{color:#e7464b;opacity:1}
+    .grid-wave[data-state='neutral']{color:#9bbbd3;opacity:.44}
+    .grid-wave[data-state='missing']{color:#9bbbd3;opacity:.25}
+    .wave-stroke{fill:none;stroke:currentColor;stroke-width:1.75;stroke-linecap:round;
+      filter:drop-shadow(0 0 3px currentColor)}
+    .wave-fill{fill:currentColor;stroke:none;opacity:.14}
+    .grid-wave[data-state='export'] .wave-stroke,
+    .grid-wave[data-state='import'] .wave-stroke{
+      animation:grid-wave-breathe 2.6s ease-in-out infinite}
+    @keyframes grid-wave-breathe{50%{opacity:.65}}
+
     .node-marstek{color:#5465d4}.node-solax{color:#0989c7}
     .node-battery .node-surface{fill:rgba(235,247,255,.96)}
     .battery-heading{font-family:inherit;font-weight:800;fill:#15365c}
@@ -285,6 +372,8 @@
       .diagram.desktop{display:none}
       .diagram.mobile{display:block;max-width:420px}
       .node-power{font-size:23px}
+      .node-pv .node-power{font-size:20px}
+      .node-grid .grid-power{font-size:23px}
       .node-label{font-size:12px}
       .node-note{font-size:10px}
       .soc-label{font-size:10px}
@@ -297,6 +386,7 @@
       .pulse{animation:none!important;stroke-dasharray:none;opacity:.50}
       .wire[data-direction='off'] .pulse{opacity:0}
       .soc-fill{transition:none}
+      .wave-stroke{animation:none!important}
     }
   `;
   class MarstekEnergyFlowCard extends HTMLElement {
@@ -324,10 +414,9 @@
       live.textContent=any?'LIVE · Messwerte':'LIVE · keine Daten';
       const status = {
         pv: d.pv===null?'Nicht verfügbar':'Erzeugung',
-        grid: d.grid===null?'Nicht verfügbar':d.grid>5?'Einspeisung':d.grid < -5?'Netzbezug':'Ausgeglichen',
+        grid: d.grid===null?'Nicht verfügbar':d.grid>0?'Einspeisung':d.grid<0?'Netzbezug':'Ausgeglichen',
         marstek: d.marstek===null?'Nicht verfügbar':d.marstek>5?'Entladen':d.marstek < -5?'Laden':'Bereit',
         solax: d.solax===null?'Nicht verfügbar':d.solax>5?'Laden':d.solax < -5?'Entladen':'Bereit',
-        house: d.house===null?'Nicht berechenbar':'Bilanz-Schätzwert',
         necharge:d.necharge===null?'Nicht verfügbar':d.necharge>5?'Laden':'Bereit',
         delta:d.delta===null?'Nicht verfügbar':d.delta>5?'Laden':'Bereit'
       };
@@ -337,6 +426,10 @@
         }
         for(const el of this.shadowRoot.querySelectorAll(`[data-note="${k}"]`))el.textContent=status[k];
       }
+      // One measured grid sensor drives the figure, label and dynamic wave.
+      const gridWaveState=d.grid===null?'missing':d.grid>0?'export':d.grid<0?'import':'neutral';
+      for(const el of this.shadowRoot.querySelectorAll('[data-grid-wave="true"]'))
+        el.dataset.state=gridWaveState;
       for(const key of ['necharge','delta'])
         for(const node of this.shadowRoot.querySelectorAll(`[data-ev="${key}"]`))
           node.dataset.state=d[key]===null?'missing':d[key]>5?'active':'idle';
@@ -367,5 +460,5 @@
   }
   if(!customElements.get('marstek-energy-flow-card'))customElements.define('marstek-energy-flow-card',MarstekEnergyFlowCard);
   window.customCards=window.customCards||[];
-  window.customCards.push({type:'marstek-energy-flow-card',name:'Marstek Energiefluss',description:'Premium-Glass-Energiefluss mit Fotohintergrund (Desktop 7px, Mobil 12px), Batterie-SoC und Teslas'});
+  window.customCards.push({type:'marstek-energy-flow-card',name:'Marstek Energiefluss',description:'PV-Sonnen-/Paneel-Icon, Strommast, dynamische grün-rote Netzwelle, Premium Live-Energiefluss'});
 })();
