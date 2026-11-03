@@ -113,6 +113,7 @@ views:
         solax_soc: sensor.solax_m_battery_capacity_2
         marstek_soc: sensor.marstek_venus_modbus_soc_batterie
         necharge: sensor.necharge_ladeleistung
+        necharge_soc: sensor.tesla_model_3_highland_usable_battery
         delta: sensor.evcc_delta_ac_smart_wallbox_charge_power
         pv_max: number.marstek_pv_manager_pv_anzeige_maximum
     - type: custom:mushroom-number-card
