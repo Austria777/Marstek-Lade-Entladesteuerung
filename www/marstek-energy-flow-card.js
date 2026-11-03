@@ -1,4 +1,4 @@
-/* Marstek Energy Flow Card 0.5.11 — six live PV signal bars with stored 8000–14000 W full-scale; visual only. */
+/* Marstek Energy Flow Card 0.5.12 — Tesla Model 3 SoC beside NeCharge charging power; display only. */
 (() => {
   'use strict';
   const DEFAULT = Object.freeze({
@@ -8,6 +8,7 @@
     marstek: 'sensor.marstek_venus_modbus_ac_leistung',
     solax: 'sensor.solax_m_battery_power_charge',
     necharge: 'sensor.necharge_ladeleistung',
+    necharge_soc: 'sensor.tesla_model_3_highland_usable_battery',
     delta: 'sensor.evcc_delta_ac_smart_wallbox_charge_power',
     solax_soc: 'sensor.solax_m_battery_capacity_2',
     marstek_soc: 'sensor.marstek_venus_modbus_soc_batterie'
@@ -40,6 +41,7 @@
     return {
       pv,grid,marstek,solax,house,
       necharge:watts(hass,entities.necharge,'W'),
+      necharge_soc:numeric(hass,entities.necharge_soc),
       delta:watts(hass,entities.delta,'kW'),
       solax_soc:numeric(hass,entities.solax_soc),
       marstek_soc:numeric(hass,entities.marstek_soc)
@@ -231,9 +233,13 @@
          x="7" y="39" width="${imgWidth}" height="${h-51}"
          preserveAspectRatio="xMidYMid meet"/>
       <text class="node-power ev-power" data-value="${key}"
-        x="${textX}" y="${h-47}" text-anchor="start">– W</text>
+        x="${textX}" y="${key==='necharge'?h-66:h-47}" text-anchor="start">– W</text>
+      ${key==='necharge'
+        ? `<text class="node-power ev-soc" data-ev-soc="necharge"
+              x="${textX}" y="${h-40}" text-anchor="start">SoC –</text>`
+        : ''}
       <text class="node-note ev-status" data-note="${key}"
-        x="${textX}" y="${h-27}" text-anchor="start">Keine Messwerte</text>
+        x="${textX}" y="${key==='necharge'?h-18:h-27}" text-anchor="start">Keine Messwerte</text>
     </g>`;
   }
   function link(key,d) {
@@ -392,6 +398,7 @@
     .node-ev[data-state='active'] .node-surface{stroke:#49cdec;stroke-width:2.5}
     .ev-label{font-family:inherit;fill:#183957;font-size:14px;font-weight:800}
     .ev-power{font-size:21px}
+    .ev-soc{font-size:18px;font-weight:800;fill:#072951}
     .ev-status{font-size:11px}
     .vehicle-image{pointer-events:none}
     .wire{color:#119af3}
@@ -427,6 +434,7 @@
       .soc-label{font-size:10px}
       .ev-label{font-size:12px}
       .ev-power{font-size:19px}
+      .ev-soc{font-size:15px}
       .battery-status{font-size:10px}
       .footer{font-size:10px}
     }
@@ -496,6 +504,12 @@
       for(const key of ['necharge','delta'])
         for(const node of this.shadowRoot.querySelectorAll(`[data-ev="${key}"]`))
           node.dataset.state=d[key]===null?'missing':d[key]>5?'active':'idle';
+      // Vehicle battery SoC is read independently of the live charging power.
+      // Invalid/missing values show a dash; they never change the car or flow state.
+      const evSoc=d.necharge_soc!==null && d.necharge_soc>=0 && d.necharge_soc<=100
+        ? d.necharge_soc : null;
+      for(const el of this.shadowRoot.querySelectorAll('[data-ev-soc="necharge"]'))
+        el.textContent=evSoc===null?'SoC –':`SoC ${Math.round(evSoc)} %`;
       for(const k of ['solax_soc','marstek_soc']) {
         const soc=d[k],base=k==='marstek_soc'?'marstek':'solax';
         // Each responsive battery node stores its own precise track width.
@@ -523,5 +537,5 @@
   }
   if(!customElements.get('marstek-energy-flow-card'))customElements.define('marstek-energy-flow-card',MarstekEnergyFlowCard);
   window.customCards=window.customCards||[];
-  window.customCards.push({type:'marstek-energy-flow-card',name:'Marstek Energiefluss',description:'Sechs stufige PV-Auslastungsbalken, Smart-Home-Icon und dynamischer Netzfluss'});
+  window.customCards.push({type:'marstek-energy-flow-card',name:'Marstek Energiefluss',description:'Live-Energiefluss mit Tesla Model 3 SoC, sechs PV-Balken und dynamischem Netzfluss'});
 })();

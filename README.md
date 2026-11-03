@@ -1,3 +1,45 @@
+# Marstek Energy Studio v0.5.12 – Tesla Model 3 Highland SoC im NeCharge-Kästchen
+
+Im bestehenden Energy-Flow-Dashboard wird der **aktuelle Tesla Model 3 Highland SoC**
+zusätzlich zur NeCharge-Ladeleistung angezeigt. Die neue Zeile **SoC 97 %**
+(als Beispiel) steht im selben Fahrzeug-Kästchen direkt unter der Live-Leistung,
+im passenden kräftigen Stil. Der Ladestatus bleibt erhalten.
+
+- Quelle: `sensor.tesla_model_3_highland_usable_battery` (Prozent).
+- Frei änderbare Entity-Zuordnung der Karte: `entities.necharge_soc`.
+- Der SoC wird live in **Desktop- und Mobilansicht** aktualisiert.
+- Bei fehlendem/ungültigem Sensor erscheint `SoC –`, keine erfundene Null.
+- Keine Änderung an Tesla-/NeCharge-Laderegelung, Marstek, SolaX, EVCC,
+  PV-/Netzleistung, Lade-/Entladegrenzen oder Hausbilanz.
+- Andere HA-Installationen können statt des vorgegebenen Sensors eine
+  eigene Entität als `necharge_soc` angeben; der Eintrag ist optional,
+  weil die JS-Karte einen Standardwert hat.
+
+**Installation v0.5.12 (Cache-sicher):**
+
+1. In HACS auf **v0.5.12** aktualisieren und Home Assistant neu starten,
+   falls die angezeigte Integrationsversion aktualisiert werden soll.
+2. Die GitHub-Datei **`www/marstek-energy-flow-card-v0512.js`** nach
+   `/config/www/marstek-energy-flow-card-v0512.js` kopieren.
+   Die bestehende `marstek-energy-flow-card-v0511.js` kann unangetastet bleiben.
+3. In **Einstellungen → Dashboards → Ressourcen** die *bestehende*
+   Energy-Flow-JavaScript-Modul-Ressource bearbeiten, nicht doppelt hinzufügen:
+   `/local/marstek-energy-flow-card-v0512.js`
+4. Dashboard neu laden. Dank des neuen Dateinamens verwenden auch Safari
+   am iPhone und die Home-Assistant-iOS-App eine neue Ressourcen-URL.
+5. Bei Bedarf im Energy-Flow-Dashboard unter `entities:` ergänzen:
+
+   ```yaml
+   necharge_soc: sensor.tesla_model_3_highland_usable_battery
+   ```
+
+   Sowohl `dashboard.yaml` als auch `dashboard-view.yaml` enthalten
+   diese Zeile bereits. Bestehende individuelle Dashboards funktionieren
+   jedoch ohne YAML-Änderung, da der Wert voreingestellt ist.
+
+**Hinweis:** Diese Änderung betrifft nur die Visualisierung. Bei fehlendem
+Tesla-SoC gibt es keine Auswirkung auf NeCharge-Ladeleistung oder Status.
+
 # Marstek Energy Studio v0.5.11 – Dynamische PV-Signalbalken
 
 **PV gesamt:** Die bisherigen dekorativen Balken sind durch **6 echte

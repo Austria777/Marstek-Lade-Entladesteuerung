@@ -10,7 +10,7 @@ global.customElements={
 };
 class StubElement {
   attachShadow(){
-    const values=new Map(),notes=new Map(),flows=new Map(),vehicles=new Map(),soc=new Map(),socBars=new Map(),gridWave=new Map(),pvBars=new Map(),pvPct=new Map(),single=new Map();
+    const values=new Map(),notes=new Map(),flows=new Map(),vehicles=new Map(),soc=new Map(),socBars=new Map(),gridWave=new Map(),pvBars=new Map(),pvPct=new Map(),evSoc=new Map(),single=new Map();
     const items=(map,k)=>{
       if(!map.has(k)) map.set(k,Array.from({length:2},()=>({
         textContent:"",dataset:{},attributes:{},
@@ -26,12 +26,12 @@ class StubElement {
         return single.get(selector);
       },
       querySelectorAll(selector) {
-        const m=selector.match(/^\[data-(value|note|flow|ev|soc|soc-bar|grid-wave|pv-bar|pv-pct)="([^"]+)"\]$/);
+        const m=selector.match(/^\[data-(value|note|flow|ev|soc|soc-bar|grid-wave|pv-bar|pv-pct|ev-soc)="([^"]+)"\]$/);
         if(!m)return [];
-        const source={value:values,note:notes,flow:flows,ev:vehicles,soc,"soc-bar":socBars,"grid-wave":gridWave,"pv-bar":pvBars,"pv-pct":pvPct}[m[1]];
+        const source={value:values,note:notes,flow:flows,ev:vehicles,soc,"soc-bar":socBars,"grid-wave":gridWave,"pv-bar":pvBars,"pv-pct":pvPct,"ev-soc":evSoc}[m[1]];
         return items(source,m[2]);
       },
-      _values:values,_notes:notes,_flows:flows,_vehicles:vehicles,_soc:soc,_socBars:socBars,_gridWave:gridWave,_pvBars:pvBars,_pvPct:pvPct
+      _values:values,_notes:notes,_flows:flows,_vehicles:vehicles,_soc:soc,_socBars:socBars,_gridWave:gridWave,_pvBars:pvBars,_pvPct:pvPct,_evSoc:evSoc
     };
     return this.shadowRoot;
   }
@@ -51,6 +51,7 @@ function card(){
     marstek_soc:"sensor.marstek_soc",
     solax_soc:"sensor.solax_soc",
     necharge:"sensor.necharge",
+    necharge_soc:"sensor.model3_soc",
     delta:"sensor.delta"
   }});
   return c;
@@ -66,6 +67,7 @@ function hass(necharge="0", delta="0", deltaUnit="kW"){
     "sensor.marstek_soc":make("80","%"),
     "sensor.solax_soc":make("100","%"),
     "sensor.necharge":make(necharge,"W"),
+    "sensor.model3_soc":make("97","%"),
     "sensor.delta":make(delta,deltaUnit)
   }};
 }
@@ -299,4 +301,56 @@ test("PV bars use safe default when the new entity is missing; invalid PV displa
   assert.equal(blueBars(c),0);
   assert.equal(c.shadowRoot._pvPct.get("true")[0].textContent,"– %");
   assert.equal(c.shadowRoot._notes.get("pv")[0].textContent,"Nicht verfügbar");
+});
+
+
+test("Model 3 SoC is displayed beside charging power in both responsive NeCharge tiles",()=>{
+  const c=card(),html=c.shadowRoot.innerHTML;
+  assert.equal((html.match(/data-ev-soc="necharge"/g)||[]).length,2);
+  assert.equal((html.match(/class="node-power ev-soc"/g)||[]).length,2);
+  assert.match(html,/\.ev-soc\{font-size:18px;font-weight:800/);
+  assert.match(html,/\.ev-soc\{font-size:15px\}/);
+  const h=hass("1200","0");
+  c.hass=h;
+  assert.equal(c.shadowRoot._evSoc.get("necharge")[0].textContent,"SoC 97 %");
+  assert.equal(c.shadowRoot._evSoc.get("necharge")[1].textContent,"SoC 97 %");
+  assert.equal(numberOfWatts(c,"necharge"),1200);
+  assert.equal(state(c,"necharge"),"active");
+});
+test("Model 3 SoC updates live, including 0 and 100 percent",()=>{
+  const c=card(),h=hass("0","0");
+  h.states["sensor.model3_soc"].state="42.6";c.hass=h;
+  assert.equal(c.shadowRoot._evSoc.get("necharge")[0].textContent,"SoC 43 %");
+  h.states["sensor.model3_soc"].state="0";c.hass=h;
+  assert.equal(c.shadowRoot._evSoc.get("necharge")[0].textContent,"SoC 0 %");
+  h.states["sensor.model3_soc"].state="100";c.hass=h;
+  assert.equal(c.shadowRoot._evSoc.get("necharge")[0].textContent,"SoC 100 %");
+  assert.equal(state(c,"necharge"),"idle");
+  assert.equal(text(c,"necharge"),"0 W");
+});
+test("Model 3 missing/invalid SoC shows dash and never changes charging logic",()=>{
+  const c=card(),h=hass("1300","1.5");
+  h.states["sensor.model3_soc"].state="unavailable";c.hass=h;
+  assert.equal(c.shadowRoot._evSoc.get("necharge")[0].textContent,"SoC –");
+  assert.equal(c.shadowRoot._evSoc.get("necharge")[1].textContent,"SoC –");
+  assert.equal(numberOfWatts(c,"necharge"),1300);
+  assert.equal(state(c,"necharge"),"active");
+  assert.equal(direction(c,"necharge"),"forward");
+  const houseW=numberOfWatts(c,"house");
+  h.states["sensor.model3_soc"].state="105";c.hass=h;
+  assert.equal(c.shadowRoot._evSoc.get("necharge")[0].textContent,"SoC –");
+  assert.equal(numberOfWatts(c,"house"),houseW);
+});
+test("dashboard default model3 battery sensor does not require additional backend integration",()=>{
+  const c=new Card();c.setConfig({title:"Test",entities:{
+    pv:["sensor.pv"],grid:"sensor.grid",marstek:"sensor.marstek",
+    solax:"sensor.solax",marstek_soc:"sensor.marstek_soc",
+    solax_soc:"sensor.solax_soc",necharge:"sensor.necharge",delta:"sensor.delta"
+  }});
+  const h=hass("150","0");
+  h.states["sensor.tesla_model_3_highland_usable_battery"]={
+    state:"83",attributes:{unit_of_measurement:"%"}
+  };
+  c.hass=h;
+  assert.equal(c.shadowRoot._evSoc.get("necharge")[0].textContent,"SoC 83 %");
 });
