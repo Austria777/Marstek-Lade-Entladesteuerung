@@ -10,7 +10,7 @@ global.customElements={
 };
 class StubElement {
   attachShadow(){
-    const values=new Map(),notes=new Map(),flows=new Map(),vehicles=new Map(),soc=new Map(),socBars=new Map(),gridWave=new Map(),pvBars=new Map(),pvPct=new Map(),evSoc=new Map(),single=new Map();
+    const values=new Map(),notes=new Map(),flows=new Map(),vehicles=new Map(),soc=new Map(),socBars=new Map(),gridWave=new Map(),pvBars=new Map(),pvPct=new Map(),evSoc=new Map(),evRange=new Map(),single=new Map();
     const items=(map,k)=>{
       if(!map.has(k)) map.set(k,Array.from({length:2},()=>({
         textContent:"",dataset:{},attributes:{},
@@ -26,12 +26,12 @@ class StubElement {
         return single.get(selector);
       },
       querySelectorAll(selector) {
-        const m=selector.match(/^\[data-(value|note|flow|ev|soc|soc-bar|grid-wave|pv-bar|pv-pct|ev-soc)="([^"]+)"\]$/);
+        const m=selector.match(/^\[data-(value|note|flow|ev|soc|soc-bar|grid-wave|pv-bar|pv-pct|ev-soc|ev-range)="([^"]+)"\]$/);
         if(!m)return [];
-        const source={value:values,note:notes,flow:flows,ev:vehicles,soc,"soc-bar":socBars,"grid-wave":gridWave,"pv-bar":pvBars,"pv-pct":pvPct,"ev-soc":evSoc}[m[1]];
+        const source={value:values,note:notes,flow:flows,ev:vehicles,soc,"soc-bar":socBars,"grid-wave":gridWave,"pv-bar":pvBars,"pv-pct":pvPct,"ev-soc":evSoc,"ev-range":evRange}[m[1]];
         return items(source,m[2]);
       },
-      _values:values,_notes:notes,_flows:flows,_vehicles:vehicles,_soc:soc,_socBars:socBars,_gridWave:gridWave,_pvBars:pvBars,_pvPct:pvPct,_evSoc:evSoc
+      _values:values,_notes:notes,_flows:flows,_vehicles:vehicles,_soc:soc,_socBars:socBars,_gridWave:gridWave,_pvBars:pvBars,_pvPct:pvPct,_evSoc:evSoc,_evRange:evRange
     };
     return this.shadowRoot;
   }
@@ -52,6 +52,7 @@ function card(){
     solax_soc:"sensor.solax_soc",
     necharge:"sensor.necharge",
     necharge_soc:"sensor.model3_soc",
+    necharge_range:"sensor.model3_range",
     delta:"sensor.delta"
   }});
   return c;
@@ -68,6 +69,7 @@ function hass(necharge="0", delta="0", deltaUnit="kW"){
     "sensor.solax_soc":make("100","%"),
     "sensor.necharge":make(necharge,"W"),
     "sensor.model3_soc":make("97","%"),
+    "sensor.model3_range":make("382.4","km"),
     "sensor.delta":make(delta,deltaUnit)
   }};
 }
@@ -353,4 +355,57 @@ test("dashboard default model3 battery sensor does not require additional backen
   };
   c.hass=h;
   assert.equal(c.shadowRoot._evSoc.get("necharge")[0].textContent,"SoC 83 %");
+});
+
+test("Model 3 live range is visible under SoC with km on desktop and mobile",()=>{
+  const c=card(),markup=c.shadowRoot.innerHTML,h=hass("1500","0");
+  assert.equal((markup.match(/data-ev-range="necharge"/g)||[]).length,2);
+  assert.equal((markup.match(/class="node-power ev-range"/g)||[]).length,2);
+  assert.match(markup,/\.ev-range\{font-size:16px;font-weight:750/);
+  assert.match(markup,/\.ev-range\{font-size:14px\}/);
+  c.hass=h;
+  assert.equal(c.shadowRoot._evRange.get("necharge")[0].textContent,"382 km");
+  assert.equal(c.shadowRoot._evRange.get("necharge")[1].textContent,"382 km");
+  assert.equal(c.shadowRoot._evSoc.get("necharge")[0].textContent,"SoC 97 %");
+  assert.equal(numberOfWatts(c,"necharge"),1500);
+  assert.equal(state(c,"necharge"),"active");
+  assert.equal(direction(c,"necharge"),"forward");
+});
+test("Model 3 range refreshes independently of power and SoC",()=>{
+  const c=card(),h=hass("0","0");
+  h.states["sensor.model3_range"].state="434.6";
+  c.hass=h;
+  assert.equal(c.shadowRoot._evRange.get("necharge")[0].textContent,"435 km");
+  h.states["sensor.model3_range"].state="0";
+  c.hass=h;
+  assert.equal(c.shadowRoot._evRange.get("necharge")[0].textContent,"0 km");
+  assert.equal(c.shadowRoot._evSoc.get("necharge")[1].textContent,"SoC 97 %");
+  assert.equal(state(c,"necharge"),"idle");
+});
+test("Unknown, unavailable and invalid Model 3 range show dash without affecting power",()=>{
+  const c=card(),h=hass("1300","0");
+  const originalHouse=Number(String(h.states["sensor.pv"].state));
+  for(const value of ["unknown","unavailable","-1","not-a-number"]) {
+    h.states["sensor.model3_range"].state=value;
+    c.hass=h;
+    assert.equal(c.shadowRoot._evRange.get("necharge")[0].textContent,"– km");
+    assert.equal(c.shadowRoot._evRange.get("necharge")[1].textContent,"– km");
+    assert.equal(numberOfWatts(c,"necharge"),1300);
+    assert.equal(c.shadowRoot._evSoc.get("necharge")[0].textContent,"SoC 97 %");
+    assert.equal(state(c,"necharge"),"active");
+  }
+  assert.equal(Number(h.states["sensor.pv"].state),originalHouse);
+});
+test("new Model 3 range entity defaults to supplied sensor without dashboard edits",()=>{
+  const c=new Card();c.setConfig({title:"Test",entities:{
+    pv:["sensor.pv"],grid:"sensor.grid",marstek:"sensor.marstek",
+    solax:"sensor.solax",marstek_soc:"sensor.marstek_soc",
+    solax_soc:"sensor.solax_soc",necharge:"sensor.necharge",delta:"sensor.delta"
+  }});
+  const h=hass("0","0");
+  h.states["sensor.tesla_model_3_highland_range"]={
+    state:"406.1",attributes:{unit_of_measurement:"km"}
+  };
+  c.hass=h;
+  assert.equal(c.shadowRoot._evRange.get("necharge")[0].textContent,"406 km");
 });

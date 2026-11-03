@@ -1,3 +1,44 @@
+# Marstek Energy Studio v0.5.13 – Model 3 Reichweite (km) im NeCharge-Kästchen
+
+Die Live-Energiefluss-Karte zeigt im bestehenden **NeCharge · Model 3**-Kästchen
+zusätzlich zur Ladeleistung und zum SoC jetzt die **geschätzte Tesla-Reichweite**
+mit der Einheit `km` an.
+
+- Sensor: `sensor.tesla_model_3_highland_range`
+- Die drei Messwerte werden einzeln live eingelesen: Leistung in W,
+  `SoC 97 %` und etwa `382 km` (Beispiele; keine festen Zahlen).
+- Mobil-/Desktop-Kacheln wurden vertikal angeordnet, damit der zusätzliche
+  Kilometerwert unter dem SoC und über dem bisherigen Ladestatus Platz findet.
+- Konfigurierbar über `entities.necharge_range`; für die bestehende
+  Installation ist der genannte Sensor als Standard hinterlegt.
+- Bei `unavailable`, `unknown`, nichtnumerischen oder negativen Werten
+  wird `– km` angezeigt; SoC und Ladeleistung funktionieren unabhängig.
+- Anzeige des zuletzt vom Sensor übermittelten numerischen Werts; diese Version
+  führt noch **keine Aktualitäts-/Stale-Prüfung** durch.
+- Reine Anzeige; keine Änderung an EVCC, Ladepunkt, SolaX, Marstek,
+  Hausbilanz oder Lade-/Entlade-Logik.
+
+**Installation (iPhone-Cache sicher umgehen):**
+
+1. HACS-Integration auf **v0.5.13** aktualisieren, wenn die neue
+   Integrationsversionsnummer im Dashboard erscheinen soll, und HA neu starten.
+2. GitHub-Datei `www/marstek-energy-flow-card-v0513.js` in den
+   Home-Assistant-Ordner `/config/www/marstek-energy-flow-card-v0513.js`
+   kopieren. Die bisherige Datei kann dort bleiben.
+3. **Einstellungen → Dashboards → Ressourcen:** Die vorhandene Ressource
+   (JavaScript-Modul) bearbeiten, nicht zusätzlich eine zweite anlegen:
+   `/local/marstek-energy-flow-card-v0513.js`
+4. Dashboard neu laden (iPhone-App ggf. ganz schließen und neu öffnen).
+5. Optional im vorhandenen Flow-Karten-YAML unter `entities:` ergänzen:
+
+   ```yaml
+   necharge_range: sensor.tesla_model_3_highland_range
+   ```
+
+   Diese Zeile ist in `dashboard.yaml` und `dashboard-view.yaml` bereits
+   ergänzt. Die Karte verwendet den Sensor auch ohne diese YAML-Zeile als
+   Standard – also kein kompletter Dashboard-Umbau nötig.
+
 # Marstek Energy Studio v0.5.12 – Tesla Model 3 Highland SoC im NeCharge-Kästchen
 
 Im bestehenden Energy-Flow-Dashboard wird der **aktuelle Tesla Model 3 Highland SoC**
