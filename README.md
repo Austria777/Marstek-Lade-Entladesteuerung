@@ -1,3 +1,47 @@
+# Marstek Energy Studio v0.5.14 – Tesla Model Y SoC und Reichweite im Delta-Kästchen
+
+Die **Delta · Model Y**-Kachel zeigt jetzt genau wie **NeCharge · Model 3**
+drei Live-Werte übereinander:
+
+- Ladeleistung (weiterhin aus `sensor.evcc_delta_ac_smart_wallbox_charge_power`, kW automatisch in W konvertiert).
+- **SoC** in Prozent aus `sensor.tesla_model_y_usable_battery`.
+- **Reichweite** in km aus `sensor.tesla_model_y_range`.
+
+Die neuen, frei konfigurierbaren Dashboard-Zuordnungen heißen
+`entities.delta_soc` und `entities.delta_range`. Sie sind mit den
+genannten Sensor-IDs voreingestellt und daher auch ohne Änderungen an
+bestehenden Karten-YAMLs verfügbar. Beide Dashboard-Vorlagen
+(`dashboard.yaml` und `dashboard-view.yaml`) wurden ergänzt.
+
+Die Anzeige funktioniert auf Desktop, iPad und iPhone mit der gleichen
+Aufteilung wie beim Model 3. Bei `unknown`, `unavailable` oder einem
+ungültigen Wert steht `SoC –` beziehungsweise `– km`; Laden,
+Hausbilanz und Status bleiben davon unberührt. Wenn Home Assistant einen
+alten numerischen Messwert weiterhält, bleibt er wie beim Model 3
+sichtbar; es wird noch keine Aktualitätsprüfung durchgeführt.
+
+**Installation (Cache-sicherer Dateiname):**
+
+1. Optional HACS-Integration auf **v0.5.14** aktualisieren und Home
+   Assistant neu starten, damit die Versionsanzeige aktuell ist.
+2. Die GitHub-Datei `www/marstek-energy-flow-card-v0514.js` nach
+   `/config/www/marstek-energy-flow-card-v0514.js` kopieren.
+3. Unter **Einstellungen → Dashboards → Ressourcen** die vorhandene
+   Energy-Flow-Ressource als JavaScript-Modul auf
+   `/local/marstek-energy-flow-card-v0514.js` ändern.
+   Nicht eine zweite identische Ressource zusätzlich registrieren.
+4. Dashboard am PC/Smartphone neu laden; ggf. HA-iOS-App einmal schließen.
+5. Optional für das bestehende Dashboard-YAML unter `entities:` ergänzen:
+
+   ```yaml
+   delta_soc: sensor.tesla_model_y_usable_battery
+   delta_range: sensor.tesla_model_y_range
+   ```
+
+**Sicherheit:** Nur Anzeigeänderungen an der Frontend-Karte und
+Dashboard-Entity-Zuordnung; keine Modbus-Zugriffe, Änderungen am
+Marstek-/SolaX-Controller oder EVCC-Ladeverhalten.
+
 # Marstek Energy Studio v0.5.13 – Model 3 Reichweite (km) im NeCharge-Kästchen
 
 Die Live-Energiefluss-Karte zeigt im bestehenden **NeCharge · Model 3**-Kästchen
