@@ -113,6 +113,8 @@ sections:
       necharge_soc: sensor.tesla_model_3_highland_usable_battery
       necharge_range: sensor.tesla_model_3_highland_range
       delta: sensor.evcc_delta_ac_smart_wallbox_charge_power
+      delta_soc: sensor.tesla_model_y_usable_battery
+      delta_range: sensor.tesla_model_y_range
       pv_max: number.marstek_pv_manager_pv_anzeige_maximum
   - type: custom:mushroom-number-card
     entity: number.marstek_pv_manager_pv_anzeige_maximum

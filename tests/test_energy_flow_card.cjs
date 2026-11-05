@@ -53,7 +53,9 @@ function card(){
     necharge:"sensor.necharge",
     necharge_soc:"sensor.model3_soc",
     necharge_range:"sensor.model3_range",
-    delta:"sensor.delta"
+    delta:"sensor.delta",
+    delta_soc:"sensor.modely_soc",
+    delta_range:"sensor.modely_range"
   }});
   return c;
 }
@@ -70,7 +72,9 @@ function hass(necharge="0", delta="0", deltaUnit="kW"){
     "sensor.necharge":make(necharge,"W"),
     "sensor.model3_soc":make("97","%"),
     "sensor.model3_range":make("382.4","km"),
-    "sensor.delta":make(delta,deltaUnit)
+    "sensor.delta":make(delta,deltaUnit),
+    "sensor.modely_soc":make("78","%"),
+    "sensor.modely_range":make("418","km")
   }};
 }
 function text(c,name){return c.shadowRoot._values.get(name)?.[0]?.textContent;}
@@ -309,7 +313,8 @@ test("PV bars use safe default when the new entity is missing; invalid PV displa
 test("Model 3 SoC is displayed beside charging power in both responsive NeCharge tiles",()=>{
   const c=card(),html=c.shadowRoot.innerHTML;
   assert.equal((html.match(/data-ev-soc="necharge"/g)||[]).length,2);
-  assert.equal((html.match(/class="node-power ev-soc"/g)||[]).length,2);
+  assert.equal((html.match(/class="node-power ev-soc"/g)||[]).length,4);
+  assert.equal((html.match(/data-ev-soc="delta"/g)||[]).length,2);
   assert.match(html,/\.ev-soc\{font-size:18px;font-weight:800/);
   assert.match(html,/\.ev-soc\{font-size:15px\}/);
   const h=hass("1200","0");
@@ -360,7 +365,8 @@ test("dashboard default model3 battery sensor does not require additional backen
 test("Model 3 live range is visible under SoC with km on desktop and mobile",()=>{
   const c=card(),markup=c.shadowRoot.innerHTML,h=hass("1500","0");
   assert.equal((markup.match(/data-ev-range="necharge"/g)||[]).length,2);
-  assert.equal((markup.match(/class="node-power ev-range"/g)||[]).length,2);
+  assert.equal((markup.match(/class="node-power ev-range"/g)||[]).length,4);
+  assert.equal((markup.match(/data-ev-range="delta"/g)||[]).length,2);
   assert.match(markup,/\.ev-range\{font-size:16px;font-weight:750/);
   assert.match(markup,/\.ev-range\{font-size:14px\}/);
   c.hass=h;
@@ -408,4 +414,63 @@ test("new Model 3 range entity defaults to supplied sensor without dashboard edi
   };
   c.hass=h;
   assert.equal(c.shadowRoot._evRange.get("necharge")[0].textContent,"406 km");
+});
+
+test("Tesla Model Y delta tile shows live SoC and estimated range on desktop and iPhone",()=>{
+  const c=card(),html=c.shadowRoot.innerHTML,h=hass("0","6.6");
+  assert.equal((html.match(/data-ev-soc="delta"/g)||[]).length,2);
+  assert.equal((html.match(/data-ev-range="delta"/g)||[]).length,2);
+  assert.equal((html.match(/class="node-power ev-soc"/g)||[]).length,4);
+  assert.equal((html.match(/class="node-power ev-range"/g)||[]).length,4);
+  c.hass=h;
+  for(const v of c.shadowRoot._evSoc.get("delta"))assert.equal(v.textContent,"SoC 78 %");
+  for(const v of c.shadowRoot._evRange.get("delta"))assert.equal(v.textContent,"418 km");
+  assert.equal(numberOfWatts(c,"delta"),6600);
+  assert.equal(state(c,"delta"),"active");
+  assert.equal(direction(c,"delta"),"forward");
+  assert.equal(c.shadowRoot._evSoc.get("necharge")[0].textContent,"SoC 97 %");
+  assert.equal(c.shadowRoot._evRange.get("necharge")[0].textContent,"382 km");
+});
+test("Model Y telemetry changes while charging power and Model 3 remain unchanged",()=>{
+  const c=card(),h=hass("0","0");
+  h.states["sensor.modely_soc"].state="52.7";
+  h.states["sensor.modely_range"].state="265.5";c.hass=h;
+  assert.equal(c.shadowRoot._evSoc.get("delta")[0].textContent,"SoC 53 %");
+  assert.equal(c.shadowRoot._evRange.get("delta")[1].textContent,"266 km");
+  h.states["sensor.modely_soc"].state="0";
+  h.states["sensor.modely_range"].state="0";c.hass=h;
+  assert.equal(c.shadowRoot._evSoc.get("delta")[0].textContent,"SoC 0 %");
+  assert.equal(c.shadowRoot._evRange.get("delta")[0].textContent,"0 km");
+  assert.equal(c.shadowRoot._evSoc.get("necharge")[0].textContent,"SoC 97 %");
+  assert.equal(state(c,"delta"),"idle");
+  assert.equal(text(c,"delta"),"0 W");
+});
+test("Missing/invalid Model Y data is independent of its power and Model 3 status",()=>{
+  const c=card(),h=hass("1500","2.1");
+  h.states["sensor.modely_soc"].state="unavailable";
+  h.states["sensor.modely_range"].state="unknown";
+  c.hass=h;
+  for(const v of c.shadowRoot._evSoc.get("delta"))assert.equal(v.textContent,"SoC –");
+  for(const v of c.shadowRoot._evRange.get("delta"))assert.equal(v.textContent,"– km");
+  assert.equal(numberOfWatts(c,"delta"),2100);
+  assert.equal(state(c,"delta"),"active");
+  assert.equal(direction(c,"delta"),"forward");
+  assert.equal(c.shadowRoot._evSoc.get("necharge")[0].textContent,"SoC 97 %");
+  h.states["sensor.modely_soc"].state="101";
+  h.states["sensor.modely_range"].state="-20";c.hass=h;
+  assert.equal(c.shadowRoot._evSoc.get("delta")[0].textContent,"SoC –");
+  assert.equal(c.shadowRoot._evRange.get("delta")[0].textContent,"– km");
+});
+test("Tesla Model Y sensors default to supplied IDs without changing existing dashboards",()=>{
+  const c=new Card();c.setConfig({title:"Test",entities:{
+    pv:["sensor.pv"],grid:"sensor.grid",marstek:"sensor.marstek",
+    solax:"sensor.solax",marstek_soc:"sensor.marstek_soc",
+    solax_soc:"sensor.solax_soc",necharge:"sensor.necharge",delta:"sensor.delta"
+  }});
+  const h=hass("0","0");
+  h.states["sensor.tesla_model_y_usable_battery"]={state:"90",attributes:{unit_of_measurement:"%"}};
+  h.states["sensor.tesla_model_y_range"]={state:"512.6",attributes:{unit_of_measurement:"km"}};
+  c.hass=h;
+  assert.equal(c.shadowRoot._evSoc.get("delta")[0].textContent,"SoC 90 %");
+  assert.equal(c.shadowRoot._evRange.get("delta")[0].textContent,"513 km");
 });
