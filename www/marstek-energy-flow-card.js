@@ -1,4 +1,4 @@
-/* Marstek Energy Flow Card 0.5.13 — Tesla Model 3 range (km) beneath SoC; display only. */
+/* Marstek Energy Flow Card 0.5.14 — Model 3 and Model Y SoC + range; display only. */
 (() => {
   'use strict';
   const DEFAULT = Object.freeze({
@@ -11,6 +11,8 @@
     necharge_soc: 'sensor.tesla_model_3_highland_usable_battery',
     necharge_range: 'sensor.tesla_model_3_highland_range',
     delta: 'sensor.evcc_delta_ac_smart_wallbox_charge_power',
+    delta_soc: 'sensor.tesla_model_y_usable_battery',
+    delta_range: 'sensor.tesla_model_y_range',
     solax_soc: 'sensor.solax_m_battery_capacity_2',
     marstek_soc: 'sensor.marstek_venus_modbus_soc_batterie'
   });
@@ -45,6 +47,8 @@
       necharge_soc:numeric(hass,entities.necharge_soc),
       necharge_range:numeric(hass,entities.necharge_range),
       delta:watts(hass,entities.delta,'kW'),
+      delta_soc:numeric(hass,entities.delta_soc),
+      delta_range:numeric(hass,entities.delta_range),
       solax_soc:numeric(hass,entities.solax_soc),
       marstek_soc:numeric(hass,entities.marstek_soc)
     };
@@ -235,15 +239,13 @@
          x="7" y="39" width="${imgWidth}" height="${h-51}"
          preserveAspectRatio="xMidYMid meet"/>
       <text class="node-power ev-power" data-value="${key}"
-        x="${textX}" y="${key==='necharge'?h-78:h-47}" text-anchor="start">– W</text>
-      ${key==='necharge'
-        ? `<text class="node-power ev-soc" data-ev-soc="necharge"
-              x="${textX}" y="${h-54}" text-anchor="start">SoC –</text>
-           <text class="node-power ev-range" data-ev-range="necharge"
-              x="${textX}" y="${h-31}" text-anchor="start">– km</text>`
-        : ''}
+        x="${textX}" y="${h-78}" text-anchor="start">– W</text>
+      <text class="node-power ev-soc" data-ev-soc="${key}"
+        x="${textX}" y="${h-54}" text-anchor="start">SoC –</text>
+      <text class="node-power ev-range" data-ev-range="${key}"
+        x="${textX}" y="${h-31}" text-anchor="start">– km</text>
       <text class="node-note ev-status" data-note="${key}"
-        x="${textX}" y="${key==='necharge'?h-12:h-27}" text-anchor="start">Keine Messwerte</text>
+        x="${textX}" y="${h-12}" text-anchor="start">Keine Messwerte</text>
     </g>`;
   }
   function link(key,d) {
@@ -510,18 +512,17 @@
       for(const key of ['necharge','delta'])
         for(const node of this.shadowRoot.querySelectorAll(`[data-ev="${key}"]`))
           node.dataset.state=d[key]===null?'missing':d[key]>5?'active':'idle';
-      // Vehicle battery SoC is read independently of the live charging power.
-      // Invalid/missing values show a dash; they never change the car or flow state.
-      const evSoc=d.necharge_soc!==null && d.necharge_soc>=0 && d.necharge_soc<=100
-        ? d.necharge_soc : null;
-      for(const el of this.shadowRoot.querySelectorAll('[data-ev-soc="necharge"]'))
-        el.textContent=evSoc===null?'SoC –':`SoC ${Math.round(evSoc)} %`;
-      // Display-only Tesla estimated range in kilometres. Missing and invalid
-      // measurements never change charging power, flow direction, or car state.
-      const evRange=d.necharge_range!==null && d.necharge_range>=0
-        ? d.necharge_range : null;
-      for(const el of this.shadowRoot.querySelectorAll('[data-ev-range="necharge"]'))
-        el.textContent=evRange===null?'– km':`${Math.round(evRange)} km`;
+      // Both Tesla battery metrics are display-only, independent of charging
+      // power and each other. Missing/invalid values show a dash.
+      for(const key of ['necharge','delta']) {
+        const rawSoc=d[`${key}_soc`],rawRange=d[`${key}_range`];
+        const evSoc=rawSoc!==null && rawSoc>=0 && rawSoc<=100 ? rawSoc : null;
+        const evRange=rawRange!==null && rawRange>=0 ? rawRange : null;
+        for(const el of this.shadowRoot.querySelectorAll(`[data-ev-soc="${key}"]`))
+          el.textContent=evSoc===null?'SoC –':`SoC ${Math.round(evSoc)} %`;
+        for(const el of this.shadowRoot.querySelectorAll(`[data-ev-range="${key}"]`))
+          el.textContent=evRange===null?'– km':`${Math.round(evRange)} km`;
+      }
       for(const k of ['solax_soc','marstek_soc']) {
         const soc=d[k],base=k==='marstek_soc'?'marstek':'solax';
         // Each responsive battery node stores its own precise track width.
@@ -549,5 +550,5 @@
   }
   if(!customElements.get('marstek-energy-flow-card'))customElements.define('marstek-energy-flow-card',MarstekEnergyFlowCard);
   window.customCards=window.customCards||[];
-  window.customCards.push({type:'marstek-energy-flow-card',name:'Marstek Energiefluss',description:'Live-Energiefluss mit Tesla Model 3 SoC und Reichweite, sechs PV-Balken und dynamischem Netzfluss'});
+  window.customCards.push({type:'marstek-energy-flow-card',name:'Marstek Energiefluss',description:'Live-Energiefluss mit Tesla Model 3 + Model Y SoC und Reichweite, sechs PV-Balken'});
 })();
