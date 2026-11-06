@@ -34,6 +34,21 @@ SOURCE_FIELDS = (
     "necharge_power", "necharge_active", "heater_1", "heater_2", "heater_3",
     "heater_4", "heater_5", "heater_6",
 )
+# Optional telemetry inputs for the two Tesla vehicles. The four native
+# source sensors exist on the author's system but are not required for other HA
+# installations. A remote ESPHome sync button is optional, not assumed.
+TESLA_FIELDS: dict[str, tuple[str, tuple[str, ...]]] = {
+    "model3_soc": ("sensor.tesla_model_3_highland_usable_battery", ("sensor",)),
+    "model3_range": ("sensor.tesla_model_3_highland_range", ("sensor",)),
+    "model3_awake": ("", ("sensor", "binary_sensor")),
+    "model3_sync_target": ("", ("button",)),
+    "modely_soc": ("sensor.tesla_model_y_usable_battery", ("sensor",)),
+    "modely_range": ("sensor.tesla_model_y_range", ("sensor",)),
+    "modely_awake": ("", ("sensor", "binary_sensor")),
+    "modely_sync_target": ("", ("button",)),
+}
+TESLA_STALE_SECONDS = 1800
+
 MARSTEK_FIELDS = (
     "marstek_ac", "marstek_soc", "charge_setpoint", "discharge_setpoint", "max_discharge", "max_charge",
     "user_mode", "forced_mode", "rs485", "night",
@@ -63,6 +78,7 @@ PARAMETERS: dict[str, tuple[int, int, int]] = {
 DEFAULTS: dict[str, str | int | bool] = {
     **{key: item[0] for key, item in ENTITY_FIELDS.items()},
     **{key: values[0] for key, values in PARAMETERS.items()},
+    **{key: values[0] for key, values in TESLA_FIELDS.items()},
     "pv_display_max_w": 8400,  # display scale only; never caps power hardware
     "enabled": False,
     "night_enabled": False,

@@ -1,4 +1,4 @@
-/* Marstek Energy Flow Card 0.5.15 — blue fresh Tesla telemetry, gray frozen last valid values. */
+/* Marstek Energy Flow Card 0.5.16 — central HA Tesla last values and per-vehicle SYNC. */
 (() => {
   'use strict';
   const DEFAULT = Object.freeze({
@@ -12,10 +12,16 @@
     necharge_range: 'sensor.tesla_model_3_highland_range',
     // Optional vehicle status (binary_sensor on=awake / off=asleep, or state online/asleep).
     necharge_awake: '',
+    necharge_cache_soc: 'sensor.marstek_pv_manager_tesla_model_3_soc_zuletzt',
+    necharge_cache_range: 'sensor.marstek_pv_manager_tesla_model_3_reichweite_zuletzt',
+    necharge_sync: 'button.marstek_pv_manager_tesla_model_3_sync',
     delta: 'sensor.evcc_delta_ac_smart_wallbox_charge_power',
     delta_soc: 'sensor.tesla_model_y_usable_battery',
     delta_range: 'sensor.tesla_model_y_range',
     delta_awake: '',
+    delta_cache_soc: 'sensor.marstek_pv_manager_tesla_model_y_soc_zuletzt',
+    delta_cache_range: 'sensor.marstek_pv_manager_tesla_model_y_reichweite_zuletzt',
+    delta_sync: 'button.marstek_pv_manager_tesla_model_y_sync',
     solax_soc: 'sensor.solax_m_battery_capacity_2',
     marstek_soc: 'sensor.marstek_venus_modbus_soc_batterie'
   });
@@ -254,13 +260,24 @@
          x="7" y="39" width="${imgWidth}" height="${h-51}"
          preserveAspectRatio="xMidYMid meet"/>
       <text class="node-power ev-power" data-value="${key}"
-        x="${textX}" y="${h-78}" text-anchor="start">– W</text>
+        x="${textX}" y="${h-61}" text-anchor="start">– W</text>
       <text class="node-power ev-soc" data-ev-soc="${key}"
-        x="${textX}" y="${h-54}" text-anchor="start">SoC –</text>
+        x="${textX}" y="${h-40}" text-anchor="start">SoC –</text>
       <text class="node-power ev-range" data-ev-range="${key}"
-        x="${textX}" y="${h-31}" text-anchor="start">– km</text>
+        x="${textX}" y="${h-19}" text-anchor="start">– km</text>
       <text class="node-note ev-status" data-note="${key}"
-        x="${textX}" y="${h-12}" text-anchor="start">Keine Messwerte</text>
+        x="${textX}" y="${h-5}" text-anchor="start">Keine Messwerte</text>
+      <g class="ev-sync" data-sync="${key}" data-sync-state="disabled"
+         role="button" tabindex="0" aria-label="${key==='necharge'?'Model 3':'Model Y'} synchronisieren"
+         transform="translate(${w-24} 43)">
+        <title>Synchronisation anfordern – Rückmeldung des Fahrzeugs nicht garantiert</title>
+        <circle class="ev-sync-disc" cx="0" cy="0" r="15"/>
+        <g class="ev-sync-rotor">
+          <path d="M-8 -2 A8 8 0 0 1 6 -6 M6 -6 L6 -11 M6 -6 L11 -6"/>
+          <path d="M8 2 A8 8 0 0 1 -6 6 M-6 6 L-6 11 M-6 6 L-11 6"/>
+        </g>
+        <text class="ev-sync-caption" x="0" y="21" text-anchor="middle">SYNC</text>
+      </g>
     </g>`;
   }
   function link(key,d) {
@@ -270,15 +287,15 @@
     </g>`;
   }
   function diagram(mobile=false) {
-    const size=mobile?'0 0 370 768':'0 0 860 625';
+    const size=mobile?'0 0 370 790':'0 0 860 655';
     const shapes=mobile?{
       pv:[104,12,162,90],grid:[8,153,168,98],house:[98,292,174,105],
       marstek:[191,153,174,120],solax:[98,440,174,130],
-      necharge:[5,612,174,142],delta:[191,612,174,142]
+      necharge:[5,612,174,160],delta:[191,612,174,160]
     }:{
       pv:[340,15,180,96],grid:[25,177,190,104],house:[336,175,188,112],
       marstek:[626,177,226,128],solax:[326,350,208,130],
-      necharge:[45,488,238,124],delta:[577,488,238,124]
+      necharge:[45,488,238,150],delta:[577,488,238,150]
     };
     const paths=mobile?{
       pv:'M185 102 L185 292',grid:'M92 251 L146 292',
@@ -427,6 +444,17 @@
     .ev-soc[data-fresh='true'],.ev-range[data-fresh='true']{fill:#087ddd}
     .ev-soc[data-fresh='false'],.ev-range[data-fresh='false']{fill:#8595a4}
     .ev-status{font-size:11px}
+    .ev-sync{cursor:pointer;color:#2e6899;outline:none;transition:opacity .2s}
+    .ev-sync-disc{fill:#edf7ff;stroke:#91beda;stroke-width:1.7;filter:drop-shadow(0 2px 3px rgba(33,91,143,.20))}
+    .ev-sync-rotor{fill:none;stroke:currentColor;stroke-width:2.7;stroke-linecap:round;stroke-linejoin:round;transform-box:fill-box;transform-origin:center}
+    .ev-sync-caption{fill:currentColor;font-size:8px;font-weight:900;letter-spacing:.12px}
+    .ev-sync[data-sync-state='disabled']{opacity:.40;cursor:not-allowed}
+    .ev-sync[data-sync-state='busy'],.ev-sync[data-sync-state='sent']{color:#047c4e}
+    .ev-sync[data-sync-state='busy'] .ev-sync-disc,.ev-sync[data-sync-state='sent'] .ev-sync-disc{fill:#aaf3d2;stroke:#17b878}
+    .ev-sync[data-sync-state='error']{color:#b25353}
+    .ev-sync[data-sync-state='busy'] .ev-sync-rotor{animation:ev-sync-spin .75s linear infinite}
+    .ev-sync:focus-visible .ev-sync-disc{stroke:#105fae;stroke-width:3}
+    @keyframes ev-sync-spin{to{transform:rotate(360deg)}}
     .vehicle-image{pointer-events:none}
     .wire{color:#119af3}
     .wire[data-flow='pv']{color:#e9ac2b}
@@ -478,6 +506,18 @@
     constructor(){
       super();this.attachShadow({mode:'open'});this._hass=null;this._conf=null;
       this._telemetryCache=new Map();this._freshTimer=null;
+      this._syncState={necharge:'idle',delta:'idle'};
+      this._syncTimers={};
+      // Delegate once to cover desktop and mobile SVG after setConfig redraws.
+      this.shadowRoot.addEventListener?.('click',event=>{
+        const el=event.target.closest?.('[data-sync]');
+        if(el)this._requestSync(el.dataset.sync);
+      });
+      this.shadowRoot.addEventListener?.('keydown',event=>{
+        if(event.key!=='Enter' && event.key!==' ')return;
+        const el=event.target.closest?.('[data-sync]');
+        if(el){event.preventDefault();this._requestSync(el.dataset.sync);}
+      });
     }
     connectedCallback(){
       // Repaint after telemetry expires even if no other HA state changes arrive.
@@ -487,9 +527,71 @@
         },30000);
     }
     disconnectedCallback(){
+      for(const key of ['necharge','delta']){
+        if(this._syncTimers[key] && typeof window.clearTimeout==='function')
+          window.clearTimeout(this._syncTimers[key]);
+        this._syncTimers[key]=null;
+      }
       if(this._freshTimer && typeof window.clearInterval==='function')
         window.clearInterval(this._freshTimer);
       this._freshTimer=null;
+    }
+    _syncAvailable(key){
+      const id=this._conf?.entities?.[`${key}_sync`];
+      return !!(id && this._hass?.states?.[id] &&
+        this._hass.states[id].state!=='unavailable' &&
+        typeof this._hass.callService==='function');
+    }
+    _paintSyncButtons(){
+      if(!this._conf || !this._hass)return;
+      for(const key of ['necharge','delta']){
+        const state=this._syncAvailable(key)?this._syncState[key]:'disabled';
+        for(const el of this.shadowRoot.querySelectorAll(`[data-sync="${key}"]`)){
+          el.dataset.syncState=state;
+          el.setAttribute?.('aria-disabled',String(state==='disabled'||state==='busy'));
+          const title=el.querySelector?.('title');
+          if(title)title.textContent=state==='busy'?'Synchronisation wird angefordert'
+            :state==='sent'?'Anfrage an Home Assistant gesendet – Fahrzeugantwort noch offen'
+            :state==='error'?'Anfrage fehlgeschlagen'
+            :state==='disabled'?'Sync-Entität fehlt: Energy Studio v0.5.16 in HACS installieren'
+            :'Tesla-Datenaktualisierung anfordern';
+        }
+      }
+    }
+    async _requestSync(key){
+      if(!['necharge','delta'].includes(key) || !this._syncAvailable(key)
+          || this._syncState[key]==='busy')return;
+      const entity_id=this._conf.entities[`${key}_sync`];
+      if(this._syncTimers[key] && typeof window.clearTimeout==='function')
+        window.clearTimeout(this._syncTimers[key]);
+      this._syncState[key]='busy';this._paintSyncButtons();
+      try{
+        await this._hass.callService('button','press',{entity_id});
+        // Green acknowledges only an accepted HA command, not a fresh Tesla value.
+        this._syncState[key]='sent';
+      }catch(_error){
+        this._syncState[key]='error';
+      }
+      this._paintSyncButtons();
+      if(typeof window.setTimeout==='function')
+        this._syncTimers[key]=window.setTimeout(()=>{
+          this._syncState[key]='idle';this._paintSyncButtons();
+          this._syncTimers[key]=null;
+        },1700);
+    }
+    _centralTeslaMetric(key,metric,min,max,awake){
+      const cachedId=this._conf.entities[`${key}_cache_${metric}`];
+      const central=this._hass.states?.[cachedId];
+      if(central){
+        const value=numeric(this._hass,cachedId);
+        const valid=value!==null && value>=min && value<=max;
+        // Never mix browser-local old values into a present central HA cache:
+        // all phones/tablets must agree, including before its first valid read.
+        return {value:valid?value:null,
+          fresh:valid && central.attributes?.fresh===true && awake};
+      }
+      // Compatibility with existing cards while HACS integration is updating.
+      return this._readTeslaMetric(this._conf.entities[`${key}_${metric}`],min,max,awake);
     }
     _vehicleAwake(key){
       const statusId=this._conf.entities[`${key}_awake`];
@@ -537,8 +639,8 @@
       if(!this._conf||!this._hass) return;
       for(const key of ['necharge','delta']){
         const awake=this._vehicleAwake(key);
-        const soc=this._readTeslaMetric(this._conf.entities[`${key}_soc`],0,100,awake);
-        const range=this._readTeslaMetric(this._conf.entities[`${key}_range`],0,10000,awake);
+        const soc=this._centralTeslaMetric(key,'soc',0,100,awake);
+        const range=this._centralTeslaMetric(key,'range',0,10000,awake);
         for(const el of this.shadowRoot.querySelectorAll(`[data-ev-soc="${key}"]`)){
           el.textContent=soc.value===null?'SoC –':`SoC ${Math.round(soc.value)} %`;
           el.dataset.fresh=String(soc.fresh);
@@ -607,6 +709,7 @@
           node.dataset.state=d[key]===null?'missing':d[key]>5?'active':'idle';
       // Tesla values are kept separately from charging-power/flow calculation.
       this._renderTeslaTelemetry();
+      this._paintSyncButtons();
       for(const k of ['solax_soc','marstek_soc']) {
         const soc=d[k],base=k==='marstek_soc'?'marstek':'solax';
         // Each responsive battery node stores its own precise track width.
@@ -634,5 +737,5 @@
   }
   if(!customElements.get('marstek-energy-flow-card'))customElements.define('marstek-energy-flow-card',MarstekEnergyFlowCard);
   window.customCards=window.customCards||[];
-  window.customCards.push({type:'marstek-energy-flow-card',name:'Marstek Energiefluss',description:'Live-Energiefluss: Tesla SoC/Reichweite blau aktuell oder grau gespeichert, sechs PV-Balken'});
+  window.customCards.push({type:'marstek-energy-flow-card',name:'Marstek Energiefluss',description:'Live-Energiefluss: gemeinsamer Tesla-Cache, 2 SYNC-Knöpfe, SoC, Reichweite und 6 PV-Balken'});
 })();

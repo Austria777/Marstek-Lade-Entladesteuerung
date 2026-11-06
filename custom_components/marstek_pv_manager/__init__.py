@@ -18,7 +18,7 @@ from .const import DEFAULTS, PARAMETERS
 from .logic import Decision, Inputs, Settings, NightPlan, evaluate, evaluate_night
 
 _LOGGER = logging.getLogger(__name__)
-PLATFORMS = [Platform.NUMBER, Platform.SENSOR, Platform.SWITCH]
+PLATFORMS = [Platform.NUMBER, Platform.SENSOR, Platform.SWITCH, Platform.BUTTON]
 
 
 class MarstekController:

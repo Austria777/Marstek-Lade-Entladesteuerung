@@ -1,3 +1,116 @@
+# Marstek Energy Studio v0.5.16 – Zentrale Tesla-Werte und SYNC-Knöpfe
+
+**Model 3 Highland und Model Y:** Beide Tesla-Kästchen behalten weiterhin
+die vollständige Ladeleistung in **W**, SoC in **%**, Reichweite in **km**
+und Lade-/Bereit-Status. Zusätzlich erhält jedes Kästchen rechts oben
+einen **runden SYNC-Knopf mit zwei kreisförmigen Pfeilen und dem
+Schriftzug „SYNC“**.
+
+## Zentrale SoC-/Reichweiten-Speicherung für alle Geräte
+
+Vier zusätzliche Home-Assistant-Sensoren speichern **den letzten gültigen
+Wert serverseitig** statt getrennt im iPhone-/iPad-Browser. Dafür nutzt
+die Integration die eingebaute HA-RestoreEntity-Speicherung und fragt
+die Quellsensoren alle 15 Sekunden ab. Die zuletzt bekannten Werte
+werden nach einem HA-Neustart wiederhergestellt.
+
+| Model | Zentraler SoC-Sensor | Zentraler Range-Sensor |
+| --- | --- | --- |
+| 3 Highland | `sensor.marstek_pv_manager_tesla_model_3_soc_zuletzt` | `sensor.marstek_pv_manager_tesla_model_3_reichweite_zuletzt` |
+| Y | `sensor.marstek_pv_manager_tesla_model_y_soc_zuletzt` | `sensor.marstek_pv_manager_tesla_model_y_reichweite_zuletzt` |
+
+Der Status `fresh` ist ein Attribut dieser Sensoren:
+- **Blau:** gültige Messung innerhalb von 30 Minuten, optionales Fahrzeug-Online-Signal aktiv.
+- **Grau:** Sensor `unknown`, `unavailable`, ungültig, länger als 30 Minuten
+  ohne Bericht oder optionaler Schlaf-/Offline-Sensor meldet Ruhe; der
+  **gespeicherte Zahlenwert bleibt erhalten**.
+- **Noch kein gültiger Wert seit der Installation:** `SoC –` und `– km`;
+  ein alter Wert aus dem iPhone-Browserspeicher wird **nicht** gegen den
+  zentralen Home-Assistant-Wert ausgespielt.
+- Beide Autos und beide Messwerte werden unabhängig geprüft. Die
+  Ladeleistung spielt für die Blau-/Grau-Farbe keine Rolle.
+
+Der in Version 0.5.15 verwendete lokale Browserspeicher ist nur noch
+eine **Abwärtskompatibilitäts-Fallback**, solange die neuen
+Home-Assistant-Cache-Sensoren noch nicht installiert sind. Nach dem
+Upgrade ist das zentrale HA-Ergebnis auf iPhone, iPad und PC identisch,
+sobald die Quelle mindestens einmal gültige Werte geliefert hat.
+
+## SYNC-Buttons direkt beim Auto
+
+Zwei neue Home-Assistant-`button`-Entitäten stehen bereit:
+
+- `button.marstek_pv_manager_tesla_model_3_sync`
+- `button.marstek_pv_manager_tesla_model_y_sync`
+
+Im Flow-Kästchen jeweils als runder Knopf mit **zwei kreisförmigen Pfeilen**
+und kleinem `SYNC`-Schriftzug. Ein Tippen:
+
+1. Färbt den Knopf **grün**, während die HA-Sync-Anfrage läuft;
+   die Pfeile drehen sich.
+2. Lässt die Taste für rund 1,7 Sekunden nach erfolgreicher
+   Übermittlung der Anfrage grün und kehrt dann in den neutralen Zustand zurück.
+3. Zeigt bei einem Fehler einen roten Fehlerzustand. Ist die entsprechende
+   Button-Entität nicht verfügbar, wird der Knopf deaktiviert.
+4. Der zweite Tesla kann währenddessen unabhängig bedient werden.
+
+**Wichtige Unterscheidung:** Grün bestätigt **die ausgelöste Anfrage**,
+nicht zwingend eine erfolgreiche Bluetooth-Verbindung oder eine
+neue Fahrzeugmessung. Erst bei frisch gemeldetem SoC/Range werden
+diese **Messwerte** blau.
+
+### Echte ESPHome-/Tesla-BLE-Aktualisierung
+
+In **Einstellungen → Geräte & Dienste → Marstek PV Manager → Konfigurieren
+→ Tesla** können pro Auto die Quellsensoren (SoC, Reichweite), ein optionaler
+Schlaf-/Verbindungs-Sensor und ein **optionaler Sync-Button** zugeordnet
+werden (`model3_sync_target` bzw. `modely_sync_target`). Das Ziel muss
+eine existierende `button.`-Entität sein, die **tatsächlich** beim
+jeweiligen ESPHome-/Tesla-BLE-Gerät eine Abfrage auslöst.
+
+Ist ein solcher Button hinterlegt, ruft die HA-Taste diese Entität auf.
+Ohne hinterlegten Tesla-BLE-Button versucht die Integration stattdessen
+`homeassistant.update_entity` für die beiden Sensoren. **Bei push-basierten
+ESPHome-Sensoren führt das nicht unbedingt zu einer neuen BLE-Abfrage
+und weckt auch keinen schlafenden Tesla.** Es wird kein automatischer
+Tesla-Wake-Befehl gesendet.
+
+### Optionaler Schlafstatus
+
+Unter **Konfigurieren → Tesla** lassen sich `model3_awake` und
+`modely_awake` mit einem bestehenden `binary_sensor` oder `sensor`
+belegen. Als wach gelten `on`, `awake`, `online`, `connected`, `true`.
+Alle anderen Zustände bewirken sofort grau und verhindern, dass ein
+numerischer Sensorwert den zuletzt gültigen Wert überschreibt,
+solange das Fahrzeug als schlafend/offline gemeldet ist.
+
+## Installation
+
+1. Integration in HACS auf **0.5.16** aktualisieren, **Home Assistant
+   neu starten**. Dadurch werden die vier zentralen Tesla-Sensoren und
+   die zwei Sync-Button-Entitäten angelegt. **Die Marstek-Regelung
+   und alle vorhandenen Einstellungen bleiben unverändert.**
+2. Die Datei `www/marstek-energy-flow-card-v0516.js` von GitHub nach
+   `/config/www/marstek-energy-flow-card-v0516.js` kopieren.
+3. Unter **Einstellungen → Dashboards → Ressourcen** die bisherige
+   Energy-Studio-JavaScript-Modul-Ressource (nicht zusätzlich eine zweite)
+   auf `/local/marstek-energy-flow-card-v0516.js` ändern.
+4. Dashboard im Browser oder in der HA-App neu laden. Der neue Dateiname
+   verhindert das bekannte iPhone-/iPad-Cacheproblem.
+5. **Optional** in den Energy-Flow-Karten-Entitäten eigene
+   `necharge_cache_soc`, `necharge_cache_range`,
+   `delta_cache_soc`, `delta_cache_range`, `necharge_sync`,
+   `delta_sync` konfigurieren, falls Home Assistant aufgrund von
+   Namen oder früheren Entitätskonflikten andere Entity-IDs vergeben hat.
+   Die neuen Zuordnungen sind in `dashboard.yaml` und
+   `dashboard-view.yaml` enthalten und als Standard eingebaut.
+
+Das ist **keine Tesla-Ladesteuerung**: Laden/Entladen, EVCC, Marstek,
+SolaX, Netz- und PV-Berechnungen wurden nicht verändert. SYNC
+fordert lediglich Telemetrie an.
+
+---
+
 # Marstek Energy Studio v0.5.15 – Tesla-Messwerte blau aktuell, grau eingefroren
 
 **Bei beiden Teslas** (NeCharge/Model 3 Highland und Delta/Model Y) werden

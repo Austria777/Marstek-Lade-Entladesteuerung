@@ -9,6 +9,7 @@ from homeassistant.loader import async_get_integration
 from homeassistant.helpers.entity import DeviceInfo
 
 from .const import DOMAIN
+from .tesla import TeslaCachedSensor, TESLA_METRICS
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_entities):
@@ -31,6 +32,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
         MarstekManagerSensor(controller, entry, "marstek_soc", "Marstek Ladezustand"),
         MarstekManagerSensor(controller, entry, "night_status", "Nachtladung Status"),
         MarstekVersionSensor(entry, software_version),
+        *(TeslaCachedSensor(hass, entry, *params) for params in TESLA_METRICS),
     ])
 
 

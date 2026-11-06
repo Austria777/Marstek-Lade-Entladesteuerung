@@ -118,6 +118,12 @@ views:
         delta: sensor.evcc_delta_ac_smart_wallbox_charge_power
         delta_soc: sensor.tesla_model_y_usable_battery
         delta_range: sensor.tesla_model_y_range
+        necharge_cache_soc: sensor.marstek_pv_manager_tesla_model_3_soc_zuletzt
+        necharge_cache_range: sensor.marstek_pv_manager_tesla_model_3_reichweite_zuletzt
+        delta_cache_soc: sensor.marstek_pv_manager_tesla_model_y_soc_zuletzt
+        delta_cache_range: sensor.marstek_pv_manager_tesla_model_y_reichweite_zuletzt
+        necharge_sync: button.marstek_pv_manager_tesla_model_3_sync
+        delta_sync: button.marstek_pv_manager_tesla_model_y_sync
         pv_max: number.marstek_pv_manager_pv_anzeige_maximum
     - type: custom:mushroom-number-card
       entity: number.marstek_pv_manager_pv_anzeige_maximum
