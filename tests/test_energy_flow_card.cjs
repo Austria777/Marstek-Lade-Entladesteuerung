@@ -735,8 +735,8 @@ test("Model Y SYNC sends only its own button entity; no charging services are in
     domain:"button",service:"press",
     data:{entity_id:"button.marstek_pv_manager_tesla_model_y_sync"}
   }]);
-  assert.equal(text(c,"necharge"),"1.200 W");
-  assert.equal(text(c,"delta"),"2.000 W");
+  assert.equal(numberOfWatts(c,"necharge"),1200);
+  assert.equal(numberOfWatts(c,"delta"),2000);
   assert.equal(state(c,"necharge"),"active");
   assert.equal(state(c,"delta"),"active");
 });
