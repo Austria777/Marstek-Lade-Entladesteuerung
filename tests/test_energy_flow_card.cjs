@@ -163,7 +163,7 @@ test("premium house background and 0W cars remain legible",()=>{
   assert.match(c.shadowRoot.innerHTML,/class="house-photo"/);
   assert.match(c.shadowRoot.innerHTML,/filter:blur\(7px\)/);
   assert.match(c.shadowRoot.innerHTML,/filter:blur\(12px\)/);
-  assert.match(c.shadowRoot.innerHTML,/\.node-ev\[data-state='idle'\]\{opacity:\.69/);
+  assert.match(c.shadowRoot.innerHTML,/\.node-ev\[data-state='idle'\] > :not\(\.ev-soc\):not\(\.ev-range\)\{opacity:\.69/);
   assert.equal(c.shadowRoot._vehicles.get("necharge")[0].dataset.state,"idle");
   assert.equal(c.shadowRoot._vehicles.get("delta")[0].dataset.state,"idle");
 });
