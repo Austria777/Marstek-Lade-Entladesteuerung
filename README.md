@@ -1,3 +1,77 @@
+# Marstek Energy Studio v0.5.15 – Tesla-Messwerte blau aktuell, grau eingefroren
+
+**Bei beiden Teslas** (NeCharge/Model 3 Highland und Delta/Model Y) werden
+Batterie-SoC und Reichweite separat auf ihre Aktualität geprüft:
+
+- **Blau**: Gültiger Sensorwert, dessen Home-Assistant-Messung vor maximal
+  **30 Minuten** gemeldet wurde. Das gilt **auch bei geparktem Auto**; die
+  Ladeleistung ist für die Farbe nicht ausschlaggebend.
+- **Sofort grau**: Die jeweilige Entität ist `unknown`, `unavailable`,
+  ungültig oder ein optionaler Fahrzeugstatus meldet `off` bzw. `asleep`.
+  Der **letzte zuvor gültige Wert bleibt sichtbar** (`SoC 72 %`, `380 km`).
+- **Nach 30 Minuten grau**: Wenn der Sensor zwar noch eine Zahl enthält, aber
+  seit mindestens 30 Minuten nichts mehr gemeldet hat. Eine zyklische
+  Prüfung alle 30 Sekunden aktualisiert die Farbe auch ohne HA-Statusänderung.
+- **Wieder blau**: Nach neuer gültiger Sensormeldung, sofern das Fahrzeug laut
+  optionalem Status wieder wach/online ist.
+- Die Karte merkt sich den letzten gültigen Sensorwert nicht nur im Speicher,
+  sondern auch in **lokalem Browser-Speicher (localStorage)**. Beim Neuladen
+  im selben Browser bleibt ein zuvor gesehener Wert somit grau erhalten,
+  selbst wenn die Entität vorübergehend ausfällt. **Beim ersten Besuch auf
+  einem anderen Browser/Gerät ohne bekannten Wert steht `SoC –` bzw. `– km`.**
+  Die Speicherung erfolgt nur lokal im jeweiligen Browser; es werden keine
+  neuen Home-Assistant-Entitäten angelegt.
+- `last_reported` wird bevorzugt, weil Home Assistant damit auch eine
+  unveränderte Messung als neu gemeldet kennzeichnet. Falls nicht verfügbar,
+  wird `last_updated` verwendet. Je nach Integration wird nicht jede
+  Sensormessung erneut gemeldet; dann wird die Anzeige vorsichtshalber grau.
+
+## Optional: Ruhender / schlafender Tesla sofort erkennen
+
+Wer eine zusätzliche **Verbindungs-/Schlafstatus-Entität** in Home Assistant hat,
+kann diese **optional** in der Energy-Flow-Karte unter `entities:` eintragen:
+
+```yaml
+necharge_awake: binary_sensor.DEIN_MODEL_3_AWAKE_SENSOR
+delta_awake: binary_sensor.DEIN_MODEL_Y_AWAKE_SENSOR
+```
+
+Als wach/online gelten `on`, `awake`, `online`, `connected`, `true`.
+Bei `off`, `asleep`, `unknown`, `unavailable` oder fehlender
+Verbindungs-Entität schaltet die entsprechende Anzeige **sofort auf grau**.
+Während das Fahrzeug schlafen gemeldet ist, werden sogar numerische
+SoC-/Reichweitenänderungen **nicht als neue gültige Messungen übernommen**;
+der zuletzt vorher gemessene Wert bleibt eingefroren.
+
+**Wenn keine Status-Entität angegeben wird**, funktioniert die Erkennung
+über `unknown/unavailable` bzw. die 30-Minuten-Zeitgrenze. Aus einem
+weiterhin numerischen SoC-Sensor lässt sich ein sofortiger Schlafstatus
+nicht zuverlässig ableiten. Die optionalen Entitäten sind deshalb absichtlich
+standardmäßig **leer** und erfordern keine YAML-Änderung, solange kein
+eigener Schlaf-/Online-Sensor vorhanden ist.
+
+## Installieren
+
+1. Die neue GitHub-Datei `www/marstek-energy-flow-card-v0515.js`
+   nach `/config/www/marstek-energy-flow-card-v0515.js` kopieren.
+2. In **Einstellungen → Dashboards → Ressourcen** die bestehende
+   Energy-Flow-Ressource (JavaScript-Modul) ändern auf:
+   `/local/marstek-energy-flow-card-v0515.js`.
+   Nicht parallel eine zweite Version der Karte als Ressource registrieren.
+3. Dashboard im Browser bzw. in der HA-App erneut öffnen. Der neue
+   Dateiname verhindert, dass Safari/iPhone die ältere Version aus dem
+   WebView-Cache verwendet.
+4. Optional HACS-Integration auf **v0.5.15** aktualisieren und HA neu
+   starten, damit die Versionsanzeige aktualisiert wird.
+
+Die bekannten SoC-/Reichweiten-Sensoren von Model 3 und Model Y sind
+unverändert als Standard eingetragen. Es gibt **keine Änderung an
+EVCC, Wallboxen, Marstek/SolaX-Steuerung, Lade-/Entladegrenzen oder
+PV-/Hausverbrauchsberechnung**; die Ergänzung betrifft ausschließlich
+die Darstellung.
+
+---
+
 # Marstek Energy Studio v0.5.14 – Tesla Model Y SoC und Reichweite im Delta-Kästchen
 
 Die **Delta · Model Y**-Kachel zeigt jetzt genau wie **NeCharge · Model 3**
