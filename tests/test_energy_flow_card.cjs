@@ -3,7 +3,18 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 
 const classes=new Map();
-global.window={customCards:[]};
+const telemetryStorage=new Map();
+let periodicRefresh=null;
+global.window={
+  customCards:[],
+  localStorage:{
+    getItem(key){return telemetryStorage.get(key)??null;},
+    setItem(key,value){telemetryStorage.set(key,String(value));}
+  },
+  setInterval(fn){periodicRefresh=fn;return 1;},
+  clearInterval(){periodicRefresh=null;}
+};
+test.beforeEach(()=>{telemetryStorage.clear();periodicRefresh=null;});
 global.customElements={
   get(name){return classes.get(name);},
   define(name,value){classes.set(name,value);}
@@ -152,7 +163,7 @@ test("premium house background and 0W cars remain legible",()=>{
   assert.match(c.shadowRoot.innerHTML,/class="house-photo"/);
   assert.match(c.shadowRoot.innerHTML,/filter:blur\(7px\)/);
   assert.match(c.shadowRoot.innerHTML,/filter:blur\(12px\)/);
-  assert.match(c.shadowRoot.innerHTML,/\.node-ev\[data-state='idle'\]\{opacity:\.69/);
+  assert.match(c.shadowRoot.innerHTML,/\.node-ev\[data-state='idle'\] > :not\(\.ev-soc\):not\(\.ev-range\)\{opacity:\.69/);
   assert.equal(c.shadowRoot._vehicles.get("necharge")[0].dataset.state,"idle");
   assert.equal(c.shadowRoot._vehicles.get("delta")[0].dataset.state,"idle");
 });
@@ -473,4 +484,138 @@ test("Tesla Model Y sensors default to supplied IDs without changing existing da
   c.hass=h;
   assert.equal(c.shadowRoot._evSoc.get("delta")[0].textContent,"SoC 90 %");
   assert.equal(c.shadowRoot._evRange.get("delta")[0].textContent,"513 km");
+});
+
+
+function markTeslaFresh(h,at=new Date().toISOString()){
+  for(const id of ["sensor.model3_soc","sensor.model3_range","sensor.modely_soc","sensor.modely_range"])
+    h.states[id].last_reported=at;
+}
+test("Fresh SoC and range are BLUE for both Tesla cars even while not charging",()=>{
+  const c=card(),h=hass("0","0");
+  markTeslaFresh(h,new Date(Date.now()-10000).toISOString());
+  c.hass=h;
+  for(const key of ["necharge","delta"]){
+    assert.equal(state(c,key),"idle");
+    for(const el of [...c.shadowRoot._evSoc.get(key),...c.shadowRoot._evRange.get(key)])
+      assert.equal(el.dataset.fresh,"true");
+  }
+  assert.equal(c.shadowRoot._evSoc.get("necharge")[0].textContent,"SoC 97 %");
+  assert.equal(c.shadowRoot._evRange.get("delta")[0].textContent,"418 km");
+  assert.match(c.shadowRoot.innerHTML,/data-fresh='true'.*fill:#087ddd/);
+  assert.match(c.shadowRoot.innerHTML,/data-state='idle'\] > :not\(\.ev-soc\):not\(\.ev-range\)/);
+  assert.doesNotMatch(c.shadowRoot.innerHTML,/\.node-ev\[data-state='idle'\]\{opacity:/);
+});
+test("Unknown or unavailable Tesla sensors immediately turn GREY and retain previous values",()=>{
+  const c=card(),h=hass("1200","2.5");markTeslaFresh(h);c.hass=h;
+  h.states["sensor.model3_soc"].state="unknown";
+  h.states["sensor.model3_range"].state="unavailable";
+  h.states["sensor.modely_soc"].state="unavailable";
+  h.states["sensor.modely_range"].state="unknown";
+  c.hass=h;
+  assert.equal(c.shadowRoot._evSoc.get("necharge")[0].textContent,"SoC 97 %");
+  assert.equal(c.shadowRoot._evRange.get("necharge")[0].textContent,"382 km");
+  assert.equal(c.shadowRoot._evSoc.get("delta")[0].textContent,"SoC 78 %");
+  assert.equal(c.shadowRoot._evRange.get("delta")[0].textContent,"418 km");
+  for(const key of ["necharge","delta"]){
+    for(const el of [...c.shadowRoot._evSoc.get(key),...c.shadowRoot._evRange.get(key)]){
+      assert.equal(el.dataset.fresh,"false");
+    }
+    assert.equal(state(c,key),"active");
+  }
+  assert.equal(numberOfWatts(c,"necharge"),1200);
+  assert.equal(numberOfWatts(c,"delta"),2500);
+});
+test("SoC and km become GREY after thirty minutes without a new sensor report",()=>{
+  const c=card(),h=hass("0","0");
+  markTeslaFresh(h,new Date(Date.now()-31*60*1000).toISOString());
+  c.hass=h;
+  for(const key of ["necharge","delta"]){
+    assert.equal(c.shadowRoot._evSoc.get(key)[0].dataset.fresh,"false");
+    assert.equal(c.shadowRoot._evRange.get(key)[0].dataset.fresh,"false");
+  }
+  assert.equal(c.shadowRoot._evSoc.get("necharge")[0].textContent,"SoC 97 %");
+  assert.equal(c.shadowRoot._evRange.get("delta")[0].textContent,"418 km");
+  // Re-reporting an unchanged valid value is still fresh.
+  h.states["sensor.modely_soc"].last_reported=new Date().toISOString();
+  c.hass=h;
+  assert.equal(c.shadowRoot._evSoc.get("delta")[0].dataset.fresh,"true");
+  assert.equal(c.shadowRoot._evRange.get("delta")[0].dataset.fresh,"false");
+});
+test("Optional vehicle awake statuses freeze each Tesla immediately, independently",()=>{
+  const c=card(),h=hass("0","0");
+  c.setConfig({title:"Energiefluss",entities:{
+    pv:["sensor.pv"],grid:"sensor.grid",marstek:"sensor.marstek",
+    solax:"sensor.solax",marstek_soc:"sensor.marstek_soc",solax_soc:"sensor.solax_soc",
+    necharge:"sensor.necharge",necharge_soc:"sensor.model3_soc",necharge_range:"sensor.model3_range",
+    necharge_awake:"binary_sensor.model3_awake",delta:"sensor.delta",
+    delta_soc:"sensor.modely_soc",delta_range:"sensor.modely_range",
+    delta_awake:"sensor.modely_state"
+  }});
+  h.states["binary_sensor.model3_awake"]={state:"on",attributes:{}};
+  h.states["sensor.modely_state"]={state:"online",attributes:{}};
+  markTeslaFresh(h);c.hass=h;
+  assert.equal(c.shadowRoot._evSoc.get("necharge")[0].dataset.fresh,"true");
+  assert.equal(c.shadowRoot._evSoc.get("delta")[0].dataset.fresh,"true");
+  // Sensor may still have a numeric value and receive updates when Tesla sleeps:
+  // the last value seen while awake remains frozen, and turns grey immediately.
+  h.states["binary_sensor.model3_awake"].state="off";
+  h.states["sensor.modely_state"].state="asleep";
+  h.states["sensor.model3_soc"].state="52";
+  h.states["sensor.model3_range"].state="277";
+  h.states["sensor.modely_soc"].state="66";
+  h.states["sensor.modely_range"].state="350";
+  markTeslaFresh(h);c.hass=h;
+  for(const key of ["necharge","delta"]){
+    assert.equal(c.shadowRoot._evSoc.get(key)[0].dataset.fresh,"false");
+    assert.equal(c.shadowRoot._evRange.get(key)[0].dataset.fresh,"false");
+  }
+  assert.equal(c.shadowRoot._evSoc.get("necharge")[0].textContent,"SoC 97 %");
+  assert.equal(c.shadowRoot._evRange.get("necharge")[0].textContent,"382 km");
+  assert.equal(c.shadowRoot._evSoc.get("delta")[0].textContent,"SoC 78 %");
+  assert.equal(c.shadowRoot._evRange.get("delta")[0].textContent,"418 km");
+  h.states["binary_sensor.model3_awake"].state="on";
+  h.states["sensor.modely_state"].state="online";c.hass=h;
+  assert.equal(c.shadowRoot._evSoc.get("necharge")[0].textContent,"SoC 52 %");
+  assert.equal(c.shadowRoot._evRange.get("delta")[0].textContent,"350 km");
+  assert.equal(c.shadowRoot._evSoc.get("delta")[0].dataset.fresh,"true");
+});
+test("Last valid SoC and km are restored in GREY after new card instance or reload",()=>{
+  const h=hass("0","0");markTeslaFresh(h);
+  const c=card();c.hass=h;
+  assert.ok(telemetryStorage.size>=4);
+  for(const id of ["sensor.model3_soc","sensor.model3_range","sensor.modely_soc","sensor.modely_range"])
+    h.states[id].state="unavailable";
+  const reloaded=card();reloaded.hass=h;
+  assert.equal(reloaded.shadowRoot._evSoc.get("necharge")[0].textContent,"SoC 97 %");
+  assert.equal(reloaded.shadowRoot._evRange.get("necharge")[0].textContent,"382 km");
+  assert.equal(reloaded.shadowRoot._evSoc.get("delta")[0].textContent,"SoC 78 %");
+  assert.equal(reloaded.shadowRoot._evRange.get("delta")[0].textContent,"418 km");
+  assert.equal(reloaded.shadowRoot._evSoc.get("delta")[0].dataset.fresh,"false");
+});
+test("Periodic redraw makes expired timestamps gray without further HA events",()=>{
+  const c=card(),h=hass("0","0");markTeslaFresh(h);
+  c.hass=h;c.connectedCallback();
+  assert.equal(typeof periodicRefresh,"function");
+  periodicRefresh();
+  assert.equal(c.shadowRoot._evSoc.get("necharge")[0].dataset.fresh,"true");
+  // Simulate advancing thirty-one minutes without updating last_reported.
+  const before=Date.now;
+  Date.now=()=>before()+31*60*1000;
+  try{periodicRefresh();}finally{Date.now=before;}
+  assert.equal(c.shadowRoot._evSoc.get("necharge")[0].dataset.fresh,"false");
+  assert.equal(c.shadowRoot._evRange.get("delta")[0].dataset.fresh,"false");
+  c.disconnectedCallback();
+  assert.equal(periodicRefresh,null);
+});
+test("Without any previously observed valid Tesla value, show grey dash",()=>{
+  const h=hass("0","0");
+  for(const id of ["sensor.model3_soc","sensor.model3_range","sensor.modely_soc","sensor.modely_range"])
+    h.states[id].state="unavailable";
+  const c=card();c.hass=h;
+  for(const key of ["necharge","delta"]){
+    assert.equal(c.shadowRoot._evSoc.get(key)[0].textContent,"SoC –");
+    assert.equal(c.shadowRoot._evRange.get(key)[0].textContent,"– km");
+    assert.equal(c.shadowRoot._evSoc.get(key)[0].dataset.fresh,"false");
+  }
 });
