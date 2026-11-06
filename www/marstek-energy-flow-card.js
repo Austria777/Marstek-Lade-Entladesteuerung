@@ -1,4 +1,4 @@
-/* Marstek Energy Flow Card 0.5.14 — Model 3 and Model Y SoC + range; display only. */
+/* Marstek Energy Flow Card 0.5.15 — blue fresh Tesla telemetry, gray frozen last valid values. */
 (() => {
   'use strict';
   const DEFAULT = Object.freeze({
@@ -16,6 +16,18 @@
     solax_soc: 'sensor.solax_m_battery_capacity_2',
     marstek_soc: 'sensor.marstek_venus_modbus_soc_batterie'
   });
+  // A sensor is considered current only when Home Assistant confirms a report
+  // within the last 30 minutes. last_reported is preferred because its timestamp
+  // advances even if the battery percentage or range remains unchanged.
+  const TESLA_FRESH_MS = 30 * 60 * 1000;
+  const TESLA_CACHE_PREFIX = 'marstek-energy-studio:tesla-last-valid:';
+  function reportedAt(state) {
+    if (!state) return 0;
+    const timestamp=Date.parse(state.last_reported || state.last_updated || '');
+    const now=Date.now();
+    return Number.isFinite(timestamp) && timestamp>0 && timestamp<=now+60000
+      ? timestamp : 0;
+  }
   function numeric(hass, id) {
     const raw = hass?.states?.[id]?.state;
     if (raw === undefined || raw === 'unknown' || raw === 'unavailable' || raw === '') return null;
@@ -397,15 +409,20 @@
     .soc-fill{fill:#3b8ce9;transition:width .4s ease}
     .node-solax .soc-fill{fill:#10b990}
     .soc-label{font-family:inherit;fill:#254d72;font-size:11px;font-weight:780}
-    .node-ev{color:#08a5c6;transition:opacity .3s ease,filter .3s ease}
-    .node-ev[data-state='idle']{opacity:.69;filter:grayscale(.44)}
-    .node-ev[data-state='missing']{opacity:.38;filter:grayscale(1)}
-    .node-ev[data-state='active']{opacity:1;filter:drop-shadow(0 3px 9px rgba(26,187,220,.26))}
+    .node-ev{color:#08a5c6;transition:filter .3s ease}
+    /* Keep the car and its charging power dim when not charging, but never
+       desaturate fresh Tesla SoC/range metrics along with the parent SVG node. */
+    .node-ev[data-state='idle'] > :not(.ev-soc):not(.ev-range){opacity:.69;filter:grayscale(.44)}
+    .node-ev[data-state='missing'] > :not(.ev-soc):not(.ev-range){opacity:.38;filter:grayscale(1)}
+    .node-ev[data-state='active']{filter:drop-shadow(0 3px 9px rgba(26,187,220,.26))}
     .node-ev[data-state='active'] .node-surface{stroke:#49cdec;stroke-width:2.5}
     .ev-label{font-family:inherit;fill:#183957;font-size:14px;font-weight:800}
     .ev-power{font-size:21px}
-    .ev-soc{font-size:18px;font-weight:800;fill:#072951}
-    .ev-range{font-size:16px;font-weight:750;fill:#1f5e8f}
+    .ev-soc{font-size:18px;font-weight:800}
+    .ev-range{font-size:16px;font-weight:750}
+    .ev-soc,.ev-range{transition:fill .25s ease}
+    .ev-soc[data-fresh='true'],.ev-range[data-fresh='true']{fill:#087ddd}
+    .ev-soc[data-fresh='false'],.ev-range[data-fresh='false']{fill:#8595a4}
     .ev-status{font-size:11px}
     .vehicle-image{pointer-events:none}
     .wire{color:#119af3}
@@ -455,7 +472,70 @@
     }
   `;
   class MarstekEnergyFlowCard extends HTMLElement {
-    constructor(){ super();this.attachShadow({mode:'open'});this._hass=null;this._conf=null; }
+    constructor(){
+      super();this.attachShadow({mode:'open'});this._hass=null;this._conf=null;
+      this._telemetryCache=new Map();this._freshTimer=null;
+    }
+    connectedCallback(){
+      // Repaint after telemetry expires even if no other HA state changes arrive.
+      if(!this._freshTimer && typeof window.setInterval==='function')
+        this._freshTimer=window.setInterval(()=>{
+          if(this._conf && this._hass)this._renderTeslaTelemetry();
+        },30000);
+    }
+    disconnectedCallback(){
+      if(this._freshTimer && typeof window.clearInterval==='function')
+        window.clearInterval(this._freshTimer);
+      this._freshTimer=null;
+    }
+    _readTeslaMetric(id,min,max){
+      if(!id || typeof id!=='string') return {value:null,fresh:false};
+      let cached=this._telemetryCache.get(id);
+      if(!cached){
+        // Separate per entity and browser origin. Survives dashboard refresh and
+        // unavailable states; storage access failure still leaves in-memory cache.
+        try{
+          const raw=window.localStorage?.getItem(TESLA_CACHE_PREFIX+id);
+          if(raw){
+            const entry=JSON.parse(raw);
+            if(Number.isFinite(entry?.value) && entry.value>=min && entry.value<=max
+                && Number.isFinite(entry?.reportedAt) && entry.reportedAt>=0){
+              cached={value:entry.value,reportedAt:entry.reportedAt};
+              this._telemetryCache.set(id,cached);
+            }
+          }
+        }catch(_error){ /* Browser storage can be disabled. */ }
+      }
+      const current=numeric(this._hass,id);
+      const valid=current!==null && current>=min && current<=max;
+      const timestamp=valid?reportedAt(this._hass?.states?.[id]):0;
+      if(valid && (!cached || timestamp>cached.reportedAt
+          || (timestamp===cached.reportedAt && current!==cached.value))){
+        cached={value:current,reportedAt:timestamp};
+        this._telemetryCache.set(id,cached);
+        try{
+          window.localStorage?.setItem(TESLA_CACHE_PREFIX+id,JSON.stringify(cached));
+        }catch(_error){ /* Retain in-memory value when storage is restricted. */ }
+      }
+      const fresh=valid && timestamp>0 && Date.now()-timestamp<=TESLA_FRESH_MS
+        && cached?.reportedAt===timestamp && cached?.value===current;
+      return {value:cached?.value??null,fresh};
+    }
+    _renderTeslaTelemetry(){
+      if(!this._conf||!this._hass) return;
+      for(const key of ['necharge','delta']){
+        const soc=this._readTeslaMetric(this._conf.entities[`${key}_soc`],0,100);
+        const range=this._readTeslaMetric(this._conf.entities[`${key}_range`],0,10000);
+        for(const el of this.shadowRoot.querySelectorAll(`[data-ev-soc="${key}"]`)){
+          el.textContent=soc.value===null?'SoC –':`SoC ${Math.round(soc.value)} %`;
+          el.dataset.fresh=String(soc.fresh);
+        }
+        for(const el of this.shadowRoot.querySelectorAll(`[data-ev-range="${key}"]`)){
+          el.textContent=range.value===null?'– km':`${Math.round(range.value)} km`;
+          el.dataset.fresh=String(range.fresh);
+        }
+      }
+    }
     setConfig(config){
       if (!config || !config.entities) throw new Error('entities benötigt: pv[], grid, marstek, solax, solax_soc, marstek_soc');
       const e={...DEFAULT,...config.entities};
@@ -512,17 +592,8 @@
       for(const key of ['necharge','delta'])
         for(const node of this.shadowRoot.querySelectorAll(`[data-ev="${key}"]`))
           node.dataset.state=d[key]===null?'missing':d[key]>5?'active':'idle';
-      // Both Tesla battery metrics are display-only, independent of charging
-      // power and each other. Missing/invalid values show a dash.
-      for(const key of ['necharge','delta']) {
-        const rawSoc=d[`${key}_soc`],rawRange=d[`${key}_range`];
-        const evSoc=rawSoc!==null && rawSoc>=0 && rawSoc<=100 ? rawSoc : null;
-        const evRange=rawRange!==null && rawRange>=0 ? rawRange : null;
-        for(const el of this.shadowRoot.querySelectorAll(`[data-ev-soc="${key}"]`))
-          el.textContent=evSoc===null?'SoC –':`SoC ${Math.round(evSoc)} %`;
-        for(const el of this.shadowRoot.querySelectorAll(`[data-ev-range="${key}"]`))
-          el.textContent=evRange===null?'– km':`${Math.round(evRange)} km`;
-      }
+      // Tesla values are kept separately from charging-power/flow calculation.
+      this._renderTeslaTelemetry();
       for(const k of ['solax_soc','marstek_soc']) {
         const soc=d[k],base=k==='marstek_soc'?'marstek':'solax';
         // Each responsive battery node stores its own precise track width.
@@ -550,5 +621,5 @@
   }
   if(!customElements.get('marstek-energy-flow-card'))customElements.define('marstek-energy-flow-card',MarstekEnergyFlowCard);
   window.customCards=window.customCards||[];
-  window.customCards.push({type:'marstek-energy-flow-card',name:'Marstek Energiefluss',description:'Live-Energiefluss mit Tesla Model 3 + Model Y SoC und Reichweite, sechs PV-Balken'});
+  window.customCards.push({type:'marstek-energy-flow-card',name:'Marstek Energiefluss',description:'Live-Energiefluss: Tesla SoC/Reichweite blau aktuell oder grau gespeichert, sechs PV-Balken'});
 })();
