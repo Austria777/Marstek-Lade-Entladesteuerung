@@ -10,7 +10,7 @@ from homeassistant.core import callback
 from homeassistant.helpers import selector
 
 from .const import (
-    DEFAULTS, DOMAIN, ENTITY_FIELDS, MARSTEK_FIELDS, PARAMETERS, SOURCE_FIELDS,
+    DEFAULTS, DOMAIN, ENTITY_FIELDS, MARSTEK_FIELDS, PARAMETERS, SOURCE_FIELDS, TESLA_FIELDS,
 )
 
 
@@ -28,6 +28,17 @@ def _entities_schema(keys: tuple[str, ...], current: dict[str, Any]) -> vol.Sche
             fields[vol.Optional(key, description=hint)] = select
         else:
             fields[vol.Required(key, default=current.get(key, DEFAULTS[key]))] = select
+    return vol.Schema(fields)
+
+
+def _tesla_schema(current: dict[str, Any]) -> vol.Schema:
+    """Optional Tesla mapping, including one real ESPHome sync button per car."""
+    fields = {}
+    for key, (default, domains) in TESLA_FIELDS.items():
+        current_value = current.get(key, default)
+        fields[vol.Optional(key, description={"suggested_value": current_value or default})] = (
+            selector.EntitySelector(selector.EntitySelectorConfig(domain=list(domains)))
+        )
     return vol.Schema(fields)
 
 
@@ -74,7 +85,7 @@ class MarstekOptionsFlow(config_entries.OptionsFlow):
 
     async def async_step_init(self, user_input: dict[str, Any] | None = None):
         return self.async_show_menu(
-            step_id="init", menu_options=["sources", "marstek", "limits"]
+            step_id="init", menu_options=["sources", "marstek", "tesla", "limits"]
         )
 
     async def _save(self, user_input: dict[str, Any]):
@@ -96,6 +107,15 @@ class MarstekOptionsFlow(config_entries.OptionsFlow):
         return self.async_show_form(
             step_id="marstek",
             data_schema=_entities_schema(MARSTEK_FIELDS, dict(self.config_entry.options)),
+        )
+
+    async def async_step_tesla(self, user_input: dict[str, Any] | None = None):
+        if user_input is not None:
+            # Removing an optional entity must clear any previous mapping.
+            return await self._save({**{key: "" for key in TESLA_FIELDS}, **user_input})
+        return self.async_show_form(
+            step_id="tesla",
+            data_schema=_tesla_schema(dict(self.config_entry.options)),
         )
 
     async def async_step_limits(self, user_input: dict[str, Any] | None = None):
