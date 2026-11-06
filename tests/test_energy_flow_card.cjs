@@ -5,6 +5,7 @@ const assert = require("node:assert/strict");
 const classes=new Map();
 const telemetryStorage=new Map();
 let periodicRefresh=null;
+let syncTimeout=null;
 global.window={
   customCards:[],
   localStorage:{
@@ -12,16 +13,18 @@ global.window={
     setItem(key,value){telemetryStorage.set(key,String(value));}
   },
   setInterval(fn){periodicRefresh=fn;return 1;},
-  clearInterval(){periodicRefresh=null;}
+  clearInterval(){periodicRefresh=null;},
+  setTimeout(fn){syncTimeout=fn;return 2;},
+  clearTimeout(){syncTimeout=null;}
 };
-test.beforeEach(()=>{telemetryStorage.clear();periodicRefresh=null;});
+test.beforeEach(()=>{telemetryStorage.clear();periodicRefresh=null;syncTimeout=null;});
 global.customElements={
   get(name){return classes.get(name);},
   define(name,value){classes.set(name,value);}
 };
 class StubElement {
   attachShadow(){
-    const values=new Map(),notes=new Map(),flows=new Map(),vehicles=new Map(),soc=new Map(),socBars=new Map(),gridWave=new Map(),pvBars=new Map(),pvPct=new Map(),evSoc=new Map(),evRange=new Map(),single=new Map();
+    const values=new Map(),notes=new Map(),flows=new Map(),vehicles=new Map(),soc=new Map(),socBars=new Map(),gridWave=new Map(),pvBars=new Map(),pvPct=new Map(),evSoc=new Map(),evRange=new Map(),sync=new Map(),handlers={},single=new Map();
     const items=(map,k)=>{
       if(!map.has(k)) map.set(k,Array.from({length:2},()=>({
         textContent:"",dataset:{},attributes:{},
@@ -32,17 +35,18 @@ class StubElement {
     };
     this.shadowRoot={
       innerHTML:"",
+      addEventListener(name,callback){handlers[name]=callback;},
       querySelector(selector) {
         if(!single.has(selector))single.set(selector,{dataset:{},textContent:""});
         return single.get(selector);
       },
       querySelectorAll(selector) {
-        const m=selector.match(/^\[data-(value|note|flow|ev|soc|soc-bar|grid-wave|pv-bar|pv-pct|ev-soc|ev-range)="([^"]+)"\]$/);
+        const m=selector.match(/^\[data-(value|note|flow|ev|soc|soc-bar|grid-wave|pv-bar|pv-pct|ev-soc|ev-range|sync)="([^"]+)"\]$/);
         if(!m)return [];
-        const source={value:values,note:notes,flow:flows,ev:vehicles,soc,"soc-bar":socBars,"grid-wave":gridWave,"pv-bar":pvBars,"pv-pct":pvPct,"ev-soc":evSoc,"ev-range":evRange}[m[1]];
+        const source={value:values,note:notes,flow:flows,ev:vehicles,soc,"soc-bar":socBars,"grid-wave":gridWave,"pv-bar":pvBars,"pv-pct":pvPct,"ev-soc":evSoc,"ev-range":evRange,sync}[m[1]];
         return items(source,m[2]);
       },
-      _values:values,_notes:notes,_flows:flows,_vehicles:vehicles,_soc:soc,_socBars:socBars,_gridWave:gridWave,_pvBars:pvBars,_pvPct:pvPct,_evSoc:evSoc,_evRange:evRange
+      _values:values,_notes:notes,_flows:flows,_vehicles:vehicles,_soc:soc,_socBars:socBars,_gridWave:gridWave,_pvBars:pvBars,_pvPct:pvPct,_evSoc:evSoc,_evRange:evRange,_sync:sync,_handlers:handlers
     };
     return this.shadowRoot;
   }
@@ -618,4 +622,133 @@ test("Without any previously observed valid Tesla value, show grey dash",()=>{
     assert.equal(c.shadowRoot._evRange.get(key)[0].textContent,"– km");
     assert.equal(c.shadowRoot._evSoc.get(key)[0].dataset.fresh,"false");
   }
+});
+
+
+function attachCentral(h,blue=true){
+  const base="sensor.marstek_pv_manager_";
+  const map=[
+    ["tesla_model_3_soc_zuletzt","72","%"],
+    ["tesla_model_3_reichweite_zuletzt","379","km"],
+    ["tesla_model_y_soc_zuletzt","44","%"],
+    ["tesla_model_y_reichweite_zuletzt","187","km"],
+  ];
+  for(const [slug,value,unit] of map)
+    h.states[base+slug]={
+      state:value,attributes:{fresh:blue,unit_of_measurement:unit}
+    };
+  h.states["button.marstek_pv_manager_tesla_model_3_sync"]={
+    state:"2026-11-06T15:00:00+00:00",attributes:{}
+  };
+  h.states["button.marstek_pv_manager_tesla_model_y_sync"]={
+    state:"2026-11-06T15:00:00+00:00",attributes:{}
+  };
+}
+test("Two responsive SVGs keep 0W, SoC and km with a separate circular SYNC for each Tesla",()=>{
+  const c=card(),markup=c.shadowRoot.innerHTML;
+  assert.equal((markup.match(/data-sync="necharge"/g)||[]).length,2);
+  assert.equal((markup.match(/data-sync="delta"/g)||[]).length,2);
+  assert.equal((markup.match(/class="ev-sync-disc"/g)||[]).length,4);
+  assert.equal((markup.match(/>SYNC<\/text>/g)||[]).length,4);
+  assert.match(markup,/viewBox="0 0 370 790"/);
+  assert.match(markup,/viewBox="0 0 860 655"/);
+  assert.match(markup,/class="node-power ev-power" data-value="necharge"/);
+  assert.match(markup,/class="node-power ev-power" data-value="delta"/);
+  const h=hass("0","0");attachCentral(h);h.callService=async()=>{};
+  c.hass=h;
+  assert.equal(text(c,"necharge"),"0 W");
+  assert.equal(text(c,"delta"),"0 W");
+  assert.equal(c.shadowRoot._sync.get("necharge")[0].dataset.syncState,"idle");
+  assert.equal(c.shadowRoot._sync.get("delta")[0].dataset.syncState,"idle");
+});
+test("Central cached last-known values override conflicting browser-local cache on every device",()=>{
+  const h=hass("0","0");attachCentral(h,false);
+  // Different local caches must not produce different numbers.
+  telemetryStorage.set("marstek-energy-studio:tesla-last-valid:sensor.model3_soc",
+    JSON.stringify({value:97,reportedAt:Date.now()}));
+  const ipad=card();ipad.hass=h;
+  assert.equal(ipad.shadowRoot._evSoc.get("necharge")[0].textContent,"SoC 72 %");
+  assert.equal(ipad.shadowRoot._evRange.get("necharge")[0].textContent,"379 km");
+  assert.equal(ipad.shadowRoot._evSoc.get("necharge")[0].dataset.fresh,"false");
+  telemetryStorage.clear();
+  const iphone=card();iphone.hass=h;
+  assert.equal(iphone.shadowRoot._evSoc.get("necharge")[1].textContent,"SoC 72 %");
+  assert.equal(iphone.shadowRoot._evRange.get("necharge")[1].textContent,"379 km");
+  assert.equal(iphone.shadowRoot._evSoc.get("delta")[0].textContent,"SoC 44 %");
+  assert.equal(iphone.shadowRoot._evRange.get("delta")[0].textContent,"187 km");
+});
+test("Central sensor fresh status drives BLUE for both vehicles, and stale status GREY",()=>{
+  const h=hass("0","0");attachCentral(h,true);
+  const c=card();c.hass=h;
+  for(const key of ["necharge","delta"]) {
+    assert.equal(c.shadowRoot._evSoc.get(key)[0].dataset.fresh,"true");
+    assert.equal(c.shadowRoot._evRange.get(key)[1].dataset.fresh,"true");
+  }
+  h.states["sensor.marstek_pv_manager_tesla_model_3_soc_zuletzt"].attributes.fresh=false;
+  h.states["sensor.marstek_pv_manager_tesla_model_y_reichweite_zuletzt"].attributes.fresh=false;
+  c.hass=h;
+  assert.equal(c.shadowRoot._evSoc.get("necharge")[0].dataset.fresh,"false");
+  assert.equal(c.shadowRoot._evRange.get("delta")[0].dataset.fresh,"false");
+  assert.equal(c.shadowRoot._evSoc.get("necharge")[0].textContent,"SoC 72 %");
+  assert.equal(c.shadowRoot._evRange.get("delta")[0].textContent,"187 km");
+});
+test("Unknown central cache does not revive device-specific local cache",()=>{
+  const h=hass("0","0");attachCentral(h);
+  h.states["sensor.marstek_pv_manager_tesla_model_3_soc_zuletzt"].state="unknown";
+  telemetryStorage.set("marstek-energy-studio:tesla-last-valid:sensor.model3_soc",
+    JSON.stringify({value:97,reportedAt:Date.now()}));
+  const c=card();c.hass=h;
+  assert.equal(c.shadowRoot._evSoc.get("necharge")[0].textContent,"SoC –");
+  assert.equal(c.shadowRoot._evSoc.get("necharge")[0].dataset.fresh,"false");
+});
+test("SYNC turns green and spins while the Home Assistant button.press request is pending",async()=>{
+  const h=hass("0","0");attachCentral(h);
+  const calls=[];
+  let resolvePress;
+  h.callService=(domain,service,data)=>{
+    calls.push({domain,service,data});
+    return new Promise(resolve=>{resolvePress=resolve;});
+  };
+  const c=card();c.hass=h;
+  const pending=c._requestSync("necharge");
+  for(const el of c.shadowRoot._sync.get("necharge"))
+    assert.equal(el.dataset.syncState,"busy");
+  assert.equal(c.shadowRoot._sync.get("delta")[0].dataset.syncState,"idle");
+  assert.equal(calls.length,1);
+  assert.deepEqual(calls[0],{domain:"button",service:"press",data:{
+    entity_id:"button.marstek_pv_manager_tesla_model_3_sync"
+  }});
+  assert.match(c.shadowRoot.innerHTML,/ev-sync\[data-sync-state='busy'\] \.ev-sync-rotor\{animation:/);
+  assert.match(c.shadowRoot.innerHTML,/ev-sync\[data-sync-state='busy'\].*color:#047c4e/);
+  resolvePress();await pending;
+  assert.equal(c.shadowRoot._sync.get("necharge")[0].dataset.syncState,"sent");
+  syncTimeout();
+  assert.equal(c.shadowRoot._sync.get("necharge")[0].dataset.syncState,"idle");
+});
+test("Model Y SYNC sends only its own button entity; no charging services are invoked",async()=>{
+  const h=hass("1200","2");attachCentral(h);
+  const calls=[];
+  h.callService=async(domain,service,data)=>{calls.push({domain,service,data});};
+  const c=card();c.hass=h;
+  await c._requestSync("delta");
+  assert.deepEqual(calls,[{
+    domain:"button",service:"press",
+    data:{entity_id:"button.marstek_pv_manager_tesla_model_y_sync"}
+  }]);
+  assert.equal(text(c,"necharge"),"1.200 W");
+  assert.equal(text(c,"delta"),"2.000 W");
+  assert.equal(state(c,"necharge"),"active");
+  assert.equal(state(c,"delta"),"active");
+});
+test("SYNC is disabled without a backend button and error feedback never claims a successful car update",async()=>{
+  const h=hass("0","0");attachCentral(h);
+  delete h.states["button.marstek_pv_manager_tesla_model_y_sync"];
+  h.callService=async()=>{throw Error("Bluetooth offline");};
+  const c=card();c.hass=h;
+  assert.equal(c.shadowRoot._sync.get("delta")[0].dataset.syncState,"disabled");
+  await c._requestSync("delta");
+  assert.equal(c.shadowRoot._sync.get("delta")[0].dataset.syncState,"disabled");
+  await c._requestSync("necharge");
+  assert.equal(c.shadowRoot._sync.get("necharge")[0].dataset.syncState,"error");
+  assert.equal(c.shadowRoot._evSoc.get("necharge")[0].textContent,"SoC 72 %");
 });
