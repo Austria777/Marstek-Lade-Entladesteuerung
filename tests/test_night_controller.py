@@ -28,7 +28,7 @@ def install_stubs():
     core.HomeAssistant = object
     core.callback = lambda func: func
     sys.modules["homeassistant.config_entries"].ConfigEntry = object
-    sys.modules["homeassistant.const"].Platform = types.SimpleNamespace(NUMBER=1, SENSOR=2, SWITCH=3)
+    sys.modules["homeassistant.const"].Platform = types.SimpleNamespace(NUMBER=1, SENSOR=2, SWITCH=3, BUTTON=4)
     class HomeAssistantError(Exception):
         pass
     sys.modules["homeassistant.exceptions"].HomeAssistantError = HomeAssistantError
