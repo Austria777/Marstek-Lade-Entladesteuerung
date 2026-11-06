@@ -1,3 +1,38 @@
+# Marstek Energy Studio v0.5.18 – SYNC-Kreispfeile und sichtbar drehende Animation
+
+Die beiden SYNC-Tasten für **Model 3 Highland** und **Model Y** erhalten
+nun das klassische **Synchronisieren-Symbol mit zwei deutlich erkennbaren,
+ausgefüllten Kreispfeilen** statt der schlecht sichtbaren gebogenen Linien.
+
+- Beide runden SYNC-Tasten behalten den kleinen Schriftzug **SYNC**.
+- Im Normalzustand sind Knopf und Pfeile blau.
+- Während des Home-Assistant-Serviceaufrufs **grün**, Pfeile rotieren.
+- **Nach Bestätigung der Anfrage** bleiben die Pfeile ebenfalls rotierend
+  und der Knopf noch **2,8 Sekunden grün**, damit die Bewegung selbst bei
+  einer sehr schnellen ESPHome-Antwort sichtbar ist.
+- Grün bestätigt die Service-Anfrage, nicht bereits den Bluetooth-Kontakt.
+  Bei fehlgeschlagenem Serviceaufruf wird der Knopf rot.
+- **Ladeleistung in W, SoC in %, Reichweite in km, zentrale
+  Last-Valid-Sensoren, PV-Anzeige und alle Lade-/Entladeregelungen
+  bleiben unverändert.**
+- Neue eigene Browser-Ressource gegen das iPhone-/iPad-Cacheproblem:
+  `www/marstek-energy-flow-card-v0518.js`.
+
+**Update:**
+
+1. Neue `www/marstek-energy-flow-card-v0518.js` nach
+   `/config/www/marstek-energy-flow-card-v0518.js` kopieren.
+2. **Einstellungen → Dashboards → Ressourcen**: Die eine vorhandene
+   JavaScript-Modul-Ressource auf
+   `/local/marstek-energy-flow-card-v0518.js` ändern.
+3. Dashboard in der HA-App am iPhone/iPad erneut öffnen.
+4. **Optional:** Marstek PV Manager in HACS auf **v0.5.18** aktualisieren.
+   Da sich an den Home-Assistant-Sensoren und -Services nichts ändert,
+   ist für die reine Pfeil-/Animationsverbesserung **kein HA-Neustart**
+   erforderlich.
+
+---
+
 # Marstek Energy Studio v0.5.17 – Tesla-Konfigurationsmenü sichtbar
 
 In Version 0.5.16 wurde unter **Marstek PV Manager → Konfigurieren** der

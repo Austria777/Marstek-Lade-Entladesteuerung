@@ -1,4 +1,4 @@
-/* Marstek Energy Flow Card 0.5.16 — central HA Tesla last values and per-vehicle SYNC. */
+/* Marstek Energy Flow Card 0.5.18 — recognizable circular-arrow SYNC icon, visible iOS animation. */
 (() => {
   'use strict';
   const DEFAULT = Object.freeze({
@@ -273,8 +273,10 @@
         <title>Synchronisation anfordern – Rückmeldung des Fahrzeugs nicht garantiert</title>
         <circle class="ev-sync-disc" cx="0" cy="0" r="15"/>
         <g class="ev-sync-rotor">
-          <path d="M-8 -2 A8 8 0 0 1 6 -6 M6 -6 L6 -11 M6 -6 L11 -6"/>
-          <path d="M8 2 A8 8 0 0 1 -6 6 M-6 6 L-6 11 M-6 6 L-11 6"/>
+          <!-- Distinct, solid circular-arrow heads (Material sync shape).
+               SVG path has its own static transform; the parent group rotates. -->
+          <path class="ev-sync-arrows" transform="translate(-10 -10) scale(.833333)"
+            d="M12 4V1L8 5l4 4V6c3.31 0 6 2.69 6 6 0 1.01-.25 1.97-.7 2.8l1.46 1.46C19.54 15.03 20 13.56 20 12c0-4.42-3.58-8-8-8zm0 14c-3.31 0-6-2.69-6-6 0-1.01.25-1.97.7-2.8L5.24 7.74C4.46 8.97 4 10.44 4 12c0 4.42 3.58 8 8 8v3l4-4-4-4v3z"/>
         </g>
         <text class="ev-sync-caption" x="0" y="21" text-anchor="middle">SYNC</text>
       </g>
@@ -446,15 +448,16 @@
     .ev-status{font-size:11px}
     .ev-sync{cursor:pointer;color:#2e6899;outline:none;transition:opacity .2s}
     .ev-sync-disc{fill:#edf7ff;stroke:#91beda;stroke-width:1.7;filter:drop-shadow(0 2px 3px rgba(33,91,143,.20))}
-    .ev-sync-rotor{fill:none;stroke:currentColor;stroke-width:2.7;stroke-linecap:round;stroke-linejoin:round;transform-box:fill-box;transform-origin:center}
+    .ev-sync-rotor{fill:currentColor;stroke:none;transform-box:fill-box;transform-origin:center center;will-change:transform}
     .ev-sync-caption{fill:currentColor;font-size:8px;font-weight:900;letter-spacing:.12px}
     .ev-sync[data-sync-state='disabled']{opacity:.40;cursor:not-allowed}
     .ev-sync[data-sync-state='busy'],.ev-sync[data-sync-state='sent']{color:#047c4e}
     .ev-sync[data-sync-state='busy'] .ev-sync-disc,.ev-sync[data-sync-state='sent'] .ev-sync-disc{fill:#aaf3d2;stroke:#17b878}
     .ev-sync[data-sync-state='error']{color:#b25353}
-    .ev-sync[data-sync-state='busy'] .ev-sync-rotor{animation:ev-sync-spin .75s linear infinite}
+    .ev-sync[data-sync-state='busy'] .ev-sync-rotor{animation:ev-sync-spin .8s linear infinite}
+    .ev-sync[data-sync-state='sent'] .ev-sync-rotor{animation:ev-sync-spin .8s linear infinite}
     .ev-sync:focus-visible .ev-sync-disc{stroke:#105fae;stroke-width:3}
-    @keyframes ev-sync-spin{to{transform:rotate(360deg)}}
+    @keyframes ev-sync-spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
     .vehicle-image{pointer-events:none}
     .wire{color:#119af3}
     .wire[data-flow='pv']{color:#e9ac2b}
@@ -577,7 +580,7 @@
         this._syncTimers[key]=window.setTimeout(()=>{
           this._syncState[key]='idle';this._paintSyncButtons();
           this._syncTimers[key]=null;
-        },1700);
+        },2800);
     }
     _centralTeslaMetric(key,metric,min,max,awake){
       const cachedId=this._conf.entities[`${key}_cache_${metric}`];
@@ -737,5 +740,5 @@
   }
   if(!customElements.get('marstek-energy-flow-card'))customElements.define('marstek-energy-flow-card',MarstekEnergyFlowCard);
   window.customCards=window.customCards||[];
-  window.customCards.push({type:'marstek-energy-flow-card',name:'Marstek Energiefluss',description:'Live-Energiefluss: gemeinsamer Tesla-Cache, 2 SYNC-Knöpfe, SoC, Reichweite und 6 PV-Balken'});
+  window.customCards.push({type:'marstek-energy-flow-card',name:'Marstek Energiefluss',description:'Tesla SYNC-Knöpfe mit großen Kreispfeilen und deutlich sichtbarer grüner Rotation'});
 })();
