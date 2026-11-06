@@ -276,7 +276,7 @@
           <path d="M-8 -2 A8 8 0 0 1 6 -6 M6 -6 L6 -11 M6 -6 L11 -6"/>
           <path d="M8 2 A8 8 0 0 1 -6 6 M-6 6 L-6 11 M-6 6 L-11 6"/>
         </g>
-        <text class="ev-sync-caption" x="0" y="26" text-anchor="middle">SYNC</text>
+        <text class="ev-sync-caption" x="0" y="21" text-anchor="middle">SYNC</text>
       </g>
     </g>`;
   }
@@ -584,15 +584,14 @@
       const central=this._hass.states?.[cachedId];
       if(central){
         const value=numeric(this._hass,cachedId);
-        if(value!==null && value>=min && value<=max){
-          const fresh=central.attributes?.fresh===true && awake;
-          return {value,fresh};
-        }
+        const valid=value!==null && value>=min && value<=max;
+        // Never mix browser-local old values into a present central HA cache:
+        // all phones/tablets must agree, including before its first valid read.
+        return {value:valid?value:null,
+          fresh:valid && central.attributes?.fresh===true && awake};
       }
-      // On first install central HA cache may not yet hold a value. The old
-      // local cache is a temporary fallback until the source next responds.
-      const local=this._readTeslaMetric(this._conf.entities[`${key}_${metric}`],min,max,awake);
-      return {value:local.value,fresh:central?false:local.fresh};
+      // Compatibility with existing cards while HACS integration is updating.
+      return this._readTeslaMetric(this._conf.entities[`${key}_${metric}`],min,max,awake);
     }
     _vehicleAwake(key){
       const statusId=this._conf.entities[`${key}_awake`];
