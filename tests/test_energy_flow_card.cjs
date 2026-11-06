@@ -644,6 +644,36 @@ function attachCentral(h,blue=true){
     state:"2026-11-06T15:00:00+00:00",attributes:{}
   };
 }
+test("Tesla SYNC uses clear filled circular arrows and keeps spinning in busy and sent states",()=>{
+  const c=card(),markup=c.shadowRoot.innerHTML;
+  // Both desktop and mobile SVGs show each of the two new solid arrow glyphs.
+  assert.equal((markup.match(/class="ev-sync-arrows"/g)||[]).length,4);
+  assert.equal((markup.match(/M12 4V1L8 5l4 4V6c3\.31/g)||[]).length,4);
+  assert.equal((markup.match(/class="ev-sync-disc"/g)||[]).length,4);
+  // Rotation applies to the outer group while the glyph's static
+  // scale/translation is preserved, including in mobile Safari.
+  assert.match(markup,/\.ev-sync-rotor\{fill:currentColor;stroke:none;/);
+  assert.match(markup,/\.ev-sync\[data-sync-state='busy'\] \.ev-sync-rotor\{animation:ev-sync-spin/);
+  assert.match(markup,/\.ev-sync\[data-sync-state='sent'\] \.ev-sync-rotor\{animation:ev-sync-spin/);
+  assert.match(markup,/@keyframes ev-sync-spin\{from\{transform:rotate\(0deg\)\}to\{transform:rotate\(360deg\)\}\}/);
+  assert.doesNotMatch(markup,/M-8 -2 A8 8/);
+});
+test("Both Tesla SYNC buttons remain green and rotating after a quickly accepted command",async()=>{
+  const h=hass("0","0");attachCentral(h);h.callService=async()=>{};
+  const c=card();c.hass=h;
+  await c._requestSync("necharge");
+  for(const el of c.shadowRoot._sync.get("necharge"))
+    assert.equal(el.dataset.syncState,"sent");
+  assert.equal(c.shadowRoot._sync.get("delta")[0].dataset.syncState,"idle");
+  // A clear 2.8 second green confirmation gives even fast ESPHome
+  // responses a visible animation; green is not proof of a BLE response.
+  assert.match(c._requestSync.toString(),/\},2800\)/);
+  syncTimeout();
+  assert.equal(c.shadowRoot._sync.get("necharge")[0].dataset.syncState,"idle");
+  await c._requestSync("delta");
+  assert.equal(c.shadowRoot._sync.get("delta")[0].dataset.syncState,"sent");
+});
+
 test("Two responsive SVGs keep 0W, SoC and km with a separate circular SYNC for each Tesla",()=>{
   const c=card(),markup=c.shadowRoot.innerHTML;
   assert.equal((markup.match(/data-sync="necharge"/g)||[]).length,2);
