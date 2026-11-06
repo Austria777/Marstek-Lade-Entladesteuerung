@@ -10,9 +10,12 @@
     necharge: 'sensor.necharge_ladeleistung',
     necharge_soc: 'sensor.tesla_model_3_highland_usable_battery',
     necharge_range: 'sensor.tesla_model_3_highland_range',
+    // Optional vehicle status (binary_sensor on=awake / off=asleep, or state online/asleep).
+    necharge_awake: '',
     delta: 'sensor.evcc_delta_ac_smart_wallbox_charge_power',
     delta_soc: 'sensor.tesla_model_y_usable_battery',
     delta_range: 'sensor.tesla_model_y_range',
+    delta_awake: '',
     solax_soc: 'sensor.solax_m_battery_capacity_2',
     marstek_soc: 'sensor.marstek_venus_modbus_soc_batterie'
   });
@@ -488,7 +491,16 @@
         window.clearInterval(this._freshTimer);
       this._freshTimer=null;
     }
-    _readTeslaMetric(id,min,max){
+    _vehicleAwake(key){
+      const statusId=this._conf.entities[`${key}_awake`];
+      // No connection/sleep-status entity configured: rely on the telemetry
+      // validity and last_reported freshness check alone.
+      if(!statusId || typeof statusId!=='string') return true;
+      const status=String(this._hass.states?.[statusId]?.state??'unavailable')
+        .toLowerCase().trim();
+      return ['on','awake','online','connected','true'].includes(status);
+    }
+    _readTeslaMetric(id,min,max,vehicleAwake=true){
       if(!id || typeof id!=='string') return {value:null,fresh:false};
       let cached=this._telemetryCache.get(id);
       if(!cached){
@@ -509,7 +521,7 @@
       const current=numeric(this._hass,id);
       const valid=current!==null && current>=min && current<=max;
       const timestamp=valid?reportedAt(this._hass?.states?.[id]):0;
-      if(valid && (!cached || timestamp>cached.reportedAt
+      if(valid && (vehicleAwake || !cached) && (!cached || timestamp>cached.reportedAt
           || (timestamp===cached.reportedAt && current!==cached.value))){
         cached={value:current,reportedAt:timestamp};
         this._telemetryCache.set(id,cached);
@@ -517,15 +529,16 @@
           window.localStorage?.setItem(TESLA_CACHE_PREFIX+id,JSON.stringify(cached));
         }catch(_error){ /* Retain in-memory value when storage is restricted. */ }
       }
-      const fresh=valid && timestamp>0 && Date.now()-timestamp<=TESLA_FRESH_MS
+      const fresh=vehicleAwake && valid && timestamp>0 && Date.now()-timestamp<=TESLA_FRESH_MS
         && cached?.reportedAt===timestamp && cached?.value===current;
       return {value:cached?.value??null,fresh};
     }
     _renderTeslaTelemetry(){
       if(!this._conf||!this._hass) return;
       for(const key of ['necharge','delta']){
-        const soc=this._readTeslaMetric(this._conf.entities[`${key}_soc`],0,100);
-        const range=this._readTeslaMetric(this._conf.entities[`${key}_range`],0,10000);
+        const awake=this._vehicleAwake(key);
+        const soc=this._readTeslaMetric(this._conf.entities[`${key}_soc`],0,100,awake);
+        const range=this._readTeslaMetric(this._conf.entities[`${key}_range`],0,10000,awake);
         for(const el of this.shadowRoot.querySelectorAll(`[data-ev-soc="${key}"]`)){
           el.textContent=soc.value===null?'SoC –':`SoC ${Math.round(soc.value)} %`;
           el.dataset.fresh=String(soc.fresh);
