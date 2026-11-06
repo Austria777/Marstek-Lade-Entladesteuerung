@@ -21,6 +21,7 @@
         "menu_options": {
           "sources": "Quellen und Verbraucher",
           "marstek": "Marstek und Nachtladung",
+          "tesla": "Tesla – Sensoren und SYNC",
           "limits": "Grenzwerte und Zeiten"
         }
       },
@@ -78,6 +79,19 @@
           "emergency_soc_target": "Notfall-Ziel-SoC (%)",
           "night_start_soc": "Nachtladung starten bei angezeigtem SoC (%)",
           "night_target_soc": "Nachtladung beenden bei Ziel-SoC (%)"
+        }
+      },
+      "tesla": {
+        "title": "Tesla Model 3 und Model Y konfigurieren",
+        "data": {
+          "model3_soc": "Model 3 · Batterie-SoC (Sensor)",
+          "model3_range": "Model 3 · Reichweite in km (Sensor)",
+          "model3_awake": "Model 3 · Wach-/Online-Status (optional)",
+          "model3_sync_target": "Model 3 · Force data update (ESP32-Button, optional)",
+          "modely_soc": "Model Y · Batterie-SoC (Sensor)",
+          "modely_range": "Model Y · Reichweite in km (Sensor)",
+          "modely_awake": "Model Y · Wach-/Online-Status (optional)",
+          "modely_sync_target": "Model Y · Force data update (ESP32-Button, optional)"
         }
       }
     },

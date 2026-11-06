@@ -1,3 +1,24 @@
+# Marstek Energy Studio v0.5.17 – Tesla-Konfigurationsmenü sichtbar
+
+In Version 0.5.16 wurde unter **Marstek PV Manager → Konfigurieren** der
+neue dritte Menüpunkt **Tesla** aufgrund fehlender deutscher und englischer
+Übersetzungen ohne Text angezeigt. Auch die acht Felder im Formular hatten
+keine lesbaren Namen.
+
+**Behoben in v0.5.17:** Der dritte Menüpunkt heißt jetzt
+**„Tesla – Sensoren und SYNC“**. Im folgenden Formular sind die
+SoC- und Reichweitensensoren sowie die optionalen Online-/Schlafstatus-
+und Force-data-update-Buttons für **Model 3 und Model Y** eindeutig
+bezeichnet.
+
+Für den Fix genügt **die Integration in HACS aktualisieren** und
+**Home Assistant neu starten**. Die JavaScript-Ressource
+`/local/marstek-energy-flow-card-v0516.js` bleibt unverändert.
+Es gibt keine Änderung an Ladeautomatisierungen, Marstek-/SolaX-Befehlen,
+Tesla-Abfragen oder den zentralen Messwerten.
+
+---
+
 # Marstek Energy Studio v0.5.16 – Zentrale Tesla-Werte und SYNC-Knöpfe
 
 **Model 3 Highland und Model Y:** Beide Tesla-Kästchen behalten weiterhin
