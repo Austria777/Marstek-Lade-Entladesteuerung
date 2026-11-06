@@ -32,6 +32,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
         MarstekManagerSensor(controller, entry, "marstek_soc", "Marstek Ladezustand"),
         MarstekManagerSensor(controller, entry, "night_status", "Nachtladung Status"),
         MarstekVersionSensor(entry, software_version),
+        *(TeslaCachedSensor(hass, entry, *params) for params in TESLA_METRICS),
     ])
 
 
