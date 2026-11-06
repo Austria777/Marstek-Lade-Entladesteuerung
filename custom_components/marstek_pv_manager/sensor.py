@@ -9,6 +9,7 @@ from homeassistant.loader import async_get_integration
 from homeassistant.helpers.entity import DeviceInfo
 
 from .const import DOMAIN
+from .tesla import TeslaCachedSensor, TESLA_METRICS
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_entities):
