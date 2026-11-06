@@ -21,6 +21,7 @@
         "menu_options": {
           "sources": "Sources and loads",
           "marstek": "Marstek controls and night charging",
+          "tesla": "Tesla – sensors and SYNC",
           "limits": "Limits and times"
         }
       },
@@ -78,6 +79,19 @@
           "emergency_soc_target": "Emergency target SoC (%)",
           "night_start_soc": "Start night charge at displayed SoC (%)",
           "night_target_soc": "Stop night charge at target SoC (%)"
+        }
+      },
+      "tesla": {
+        "title": "Configure Tesla Model 3 and Model Y",
+        "data": {
+          "model3_soc": "Model 3 · Battery SoC sensor",
+          "model3_range": "Model 3 · Range (km) sensor",
+          "model3_awake": "Model 3 · Awake/online status (optional)",
+          "model3_sync_target": "Model 3 · Force data update (ESP32 button, optional)",
+          "modely_soc": "Model Y · Battery SoC sensor",
+          "modely_range": "Model Y · Range (km) sensor",
+          "modely_awake": "Model Y · Awake/online status (optional)",
+          "modely_sync_target": "Model Y · Force data update (ESP32 button, optional)"
         }
       }
     },
