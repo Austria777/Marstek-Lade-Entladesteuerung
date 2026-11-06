@@ -148,18 +148,18 @@ class TeslaCachedSensor(SensorEntity, RestoreEntity):
         )
         # Never replace cached data with unknown/unavailable, out-of-range data,
         # or values while the optional vehicle state reports sleeping/offline.
+        previous = (self._value, self._reported_at, self._source_online, self._fresh)
         if valid_report and (
             self._value is None or self._reported_at is None
             or reported > self._reported_at
+            or (reported == self._reported_at and value != self._value)
         ):
             self._value = value
             self._reported_at = reported
         online = bool(valid_report and self._reported_at == reported
                       and self._value == value)
         fresh = bool(online and now - reported <= timedelta(seconds=TESLA_STALE_SECONDS))
-        if (self._source_online, self._fresh) != (online, fresh) or (
-            valid_report and self._reported_at == reported and self._value == value
-        ):
-            self._source_online = online
-            self._fresh = fresh
+        self._source_online = online
+        self._fresh = fresh
+        if previous != (self._value, self._reported_at, self._source_online, self._fresh):
             self.async_write_ha_state()
