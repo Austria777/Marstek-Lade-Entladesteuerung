@@ -1,3 +1,23 @@
+# Marstek Energy Studio v0.5.20 – Batterielinien grün beim Laden, rot beim Entladen
+
+Die Energieflusslinien für **SolaX Battery** und **Marstek Battery** erscheinen
+beim Laden **grün** (`#17b878`) und beim Entladen **rot** (`#e7464b`).
+Beide Speicher werden unabhängig dargestellt, auf Desktop und Smartphone.
+Bei Stillstand oder fehlendem Messwert bleibt die Animation ausgeschaltet.
+Die bestehende Tesla-Ladeanzeige bleibt erhalten.
+
+**Update:**
+
+1. `www/marstek-energy-flow-card-v0520.js` nach
+   `/config/www/marstek-energy-flow-card-v0520.js` kopieren.
+2. Unter **Einstellungen → Dashboards → Ressourcen** die vorhandene
+   JavaScript-Modul-Ressource auf `/local/marstek-energy-flow-card-v0520.js`
+   ändern. Nur eine Version dieser Karte als Ressource laden.
+3. Dashboard bzw. HA-App erneut öffnen. Kein Home-Assistant-Neustart
+   für diese Farbänderung erforderlich.
+
+---
+
 # Marstek Energy Studio v0.5.19 – Grüne Ladeanzeige für beide Teslas
 
 Beim Laden erscheinen der animierte Energiefluss und der Rahmen um das

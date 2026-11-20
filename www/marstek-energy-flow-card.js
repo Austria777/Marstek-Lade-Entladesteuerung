@@ -1,4 +1,4 @@
-/* Marstek Energy Flow Card 0.5.19 — green Tesla charging flows and active vehicle borders. */
+/* Marstek Energy Flow Card 0.5.20 — green battery charging flows and red discharging flows. */
 (() => {
   'use strict';
   const DEFAULT = Object.freeze({
@@ -464,6 +464,11 @@
     .wire[data-flow='grid']{color:#09b996}
     .wire[data-flow='marstek']{color:#279efa}
     .wire[data-flow='solax']{color:#259ee9}
+    /* Both battery paths point toward the house: reverse = charge, forward = discharge. */
+    .wire[data-flow='marstek'][data-direction='reverse'],
+    .wire[data-flow='solax'][data-direction='reverse']{color:#17b878}
+    .wire[data-flow='marstek'][data-direction='forward'],
+    .wire[data-flow='solax'][data-direction='forward']{color:#e7464b}
     .wire[data-flow='necharge'],.wire[data-flow='delta']{color:#11b5e6}
     .wire[data-flow='necharge'][data-direction='forward'],
     .wire[data-flow='delta'][data-direction='forward']{color:#17b878}
