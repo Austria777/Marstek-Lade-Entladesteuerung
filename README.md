@@ -1,3 +1,24 @@
+# Marstek Energy Studio v0.5.19 – Grüne Ladeanzeige für beide Teslas
+
+Beim Laden erscheinen der animierte Energiefluss und der Rahmen um das
+jeweilige Tesla-Kästchen samt Leuchteffekt **grün** (`#17b878`):
+NeCharge / Model 3 Highland und Delta / Model Y, auf Desktop und Smartphone.
+Die Farbe folgt für jedes Auto separat der bestehenden Ladeerkennung
+(Ladeleistung über 5 W). SoC und Reichweite bleiben bei aktuellen Werten
+blau und bei eingefrorenen Werten grau.
+
+**Update:**
+
+1. `www/marstek-energy-flow-card-v0519.js` nach
+   `/config/www/marstek-energy-flow-card-v0519.js` kopieren.
+2. Unter **Einstellungen → Dashboards → Ressourcen** die vorhandene
+   JavaScript-Modul-Ressource auf `/local/marstek-energy-flow-card-v0519.js`
+   ändern. Nur eine Version dieser Karte als Ressource laden.
+3. Dashboard bzw. HA-App erneut öffnen. Für die Farbänderung ist kein
+   Home-Assistant-Neustart erforderlich.
+
+---
+
 # Marstek Energy Studio v0.5.18 – SYNC-Kreispfeile und sichtbar drehende Animation
 
 Die beiden SYNC-Tasten für **Model 3 Highland** und **Model Y** erhalten

@@ -1,4 +1,4 @@
-/* Marstek Energy Flow Card 0.5.18 — recognizable circular-arrow SYNC icon, visible iOS animation. */
+/* Marstek Energy Flow Card 0.5.19 — green Tesla charging flows and active vehicle borders. */
 (() => {
   'use strict';
   const DEFAULT = Object.freeze({
@@ -436,8 +436,8 @@
        desaturate fresh Tesla SoC/range metrics along with the parent SVG node. */
     .node-ev[data-state='idle'] > :not(.ev-soc):not(.ev-range){opacity:.69;filter:grayscale(.44)}
     .node-ev[data-state='missing'] > :not(.ev-soc):not(.ev-range){opacity:.38;filter:grayscale(1)}
-    .node-ev[data-state='active']{filter:drop-shadow(0 3px 9px rgba(26,187,220,.26))}
-    .node-ev[data-state='active'] .node-surface{stroke:#49cdec;stroke-width:2.5}
+    .node-ev[data-state='active']{filter:drop-shadow(0 3px 9px rgba(23,184,120,.26))}
+    .node-ev[data-state='active'] .node-surface{stroke:#17b878;stroke-width:2.5}
     .ev-label{font-family:inherit;fill:#183957;font-size:14px;font-weight:800}
     .ev-power{font-size:21px}
     .ev-soc{font-size:18px;font-weight:800}
@@ -465,6 +465,8 @@
     .wire[data-flow='marstek']{color:#279efa}
     .wire[data-flow='solax']{color:#259ee9}
     .wire[data-flow='necharge'],.wire[data-flow='delta']{color:#11b5e6}
+    .wire[data-flow='necharge'][data-direction='forward'],
+    .wire[data-flow='delta'][data-direction='forward']{color:#17b878}
     .track,.pulse{fill:none;stroke-linecap:round;stroke-width:4}
     .track{stroke:currentColor;opacity:.26}
     .pulse{stroke:currentColor;stroke-width:4.5;
