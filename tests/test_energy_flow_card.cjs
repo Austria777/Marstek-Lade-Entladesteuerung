@@ -782,3 +782,57 @@ test("SYNC is disabled without a backend button and error feedback never claims 
   assert.equal(c.shadowRoot._sync.get("necharge")[0].dataset.syncState,"error");
   assert.equal(c.shadowRoot._evSoc.get("necharge")[0].textContent,"SoC 72 %");
 });
+
+// NOTFALL-LOGIK BEGIN: Model 3 emergency display regression tests.
+function emergencyTesla(h,status='Charging',ageMs=1000){
+  const timestamp=new Date(Date.now()-ageMs).toISOString();
+  for(const [id,value] of [
+    ['charging',status],['battery','61'],['range','301']
+  ])h.states[`sensor.tesla_model_3_highland_${id}`]={
+    state:value,last_reported:timestamp,attributes:{}
+  };
+  return h;
+}
+test('NOTFALL: missing or zero NeCharge power activates both responsive views without invented watts',()=>{
+  for(const power of ['unavailable','unknown','0']){
+    const c=card(),h=emergencyTesla(hass(power,'2.5'));attachCentral(h);c.hass=h;
+    for(const n of c.shadowRoot._vehicles.get('necharge'))assert.equal(n.dataset.state,'active');
+    for(const f of c.shadowRoot._flows.get('necharge'))assert.equal(f.dataset.direction,'forward');
+    assert.equal(text(c,'necharge'),'– W');
+    assert.equal(c.shadowRoot._notes.get('necharge')[0].textContent,'Laden · ESP32-Backup');
+    assert.equal(c.shadowRoot._evSoc.get('necharge')[0].textContent,'SoC 61 %');
+    assert.equal(c.shadowRoot._evRange.get('necharge')[0].textContent,'301 km');
+    assert.equal(numberOfWatts(c,'delta'),2500);
+    assert.equal(numberOfWatts(c,'house'),4500);
+  }
+});
+test('NOTFALL: normal power resumes priority and central telemetry immediately',()=>{
+  const c=card(),h=emergencyTesla(hass('unavailable'));attachCentral(h);c.hass=h;
+  h.states['sensor.necharge'].state='1200';c.hass=h;
+  assert.equal(numberOfWatts(c,'necharge'),1200);
+  assert.equal(c.shadowRoot._notes.get('necharge')[0].textContent,'Laden');
+  assert.equal(c.shadowRoot._evSoc.get('necharge')[0].textContent,'SoC 72 %');
+});
+test('NOTFALL: disabled, old, absent or non-charging ESP32 status cannot animate a missing charger',()=>{
+  for(const status of ['Stopped','Complete','Disconnected','unknown','unavailable']){
+    const c=card();c.hass=emergencyTesla(hass('unavailable'),status);
+    assert.equal(state(c,'necharge'),'missing');assert.equal(direction(c,'necharge'),'off');
+  }
+  const c=card();c.hass=emergencyTesla(hass('unavailable'),'Charging',301000);
+  assert.equal(state(c,'necharge'),'missing');
+  const h=emergencyTesla(hass('unavailable'));
+  delete h.states['sensor.tesla_model_3_highland_charging'].last_reported;c.hass=h;
+  assert.equal(direction(c,'necharge'),'off');
+  c.setConfig({entities:{necharge_emergency_backup:false,necharge:'sensor.necharge'}});
+  c.hass=emergencyTesla(hass('unavailable'));
+  assert.equal(direction(c,'necharge'),'off');
+});
+test('NOTFALL: expired status stops on periodic refresh; missing backup SoC keeps central cache',()=>{
+  const c=card(),h=emergencyTesla(hass('unavailable'));attachCentral(h);
+  h.states['sensor.tesla_model_3_highland_battery'].state='unavailable';c.hass=h;
+  assert.equal(c.shadowRoot._evSoc.get('necharge')[0].textContent,'SoC 72 %');
+  c.connectedCallback();
+  h.states['sensor.tesla_model_3_highland_charging'].last_reported=new Date(Date.now()-301000).toISOString();
+  periodicRefresh();assert.equal(direction(c,'necharge'),'off');c.disconnectedCallback();
+});
+// NOTFALL-LOGIK END

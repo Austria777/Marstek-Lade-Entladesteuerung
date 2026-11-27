@@ -1,4 +1,4 @@
-/* Marstek Energy Flow Card 0.5.20 — green battery charging flows and red discharging flows. */
+/* Marstek Energy Flow Card 0.5.21 — optional NOTFALL ESP32 backup display for Model 3. */
 (() => {
   'use strict';
   const DEFAULT = Object.freeze({
@@ -8,6 +8,13 @@
     marstek: 'sensor.marstek_venus_modbus_ac_leistung',
     solax: 'sensor.solax_m_battery_power_charge',
     necharge: 'sensor.necharge_ladeleistung',
+    // NOTFALL-LOGIK BEGIN: disable with entities.necharge_emergency_backup: false.
+    necharge_emergency_backup: true,
+    necharge_backup_charging: 'sensor.tesla_model_3_highland_charging',
+    necharge_backup_soc: 'sensor.tesla_model_3_highland_battery',
+    necharge_backup_range: 'sensor.tesla_model_3_highland_range',
+    // NOTFALL-LOGIK END
+
     necharge_soc: 'sensor.tesla_model_3_highland_usable_battery',
     necharge_range: 'sensor.tesla_model_3_highland_range',
     // Optional vehicle status (binary_sensor on=awake / off=asleep, or state online/asleep).
@@ -533,7 +540,7 @@
       // Repaint after telemetry expires even if no other HA state changes arrive.
       if(!this._freshTimer && typeof window.setInterval==='function')
         this._freshTimer=window.setInterval(()=>{
-          if(this._conf && this._hass)this._renderTeslaTelemetry();
+          if(this._conf && this._hass)this._update();
         },30000);
     }
     disconnectedCallback(){
@@ -589,7 +596,32 @@
           this._syncTimers[key]=null;
         },2800);
     }
+    // NOTFALL-LOGIK BEGIN: display-only fallback; never used by charging control.
+    // Remove this block, defaults above and marked hooks below to uninstall.
+    _nechargeBackupActive(){
+      const e=this._conf.entities;
+      if(e.necharge_emergency_backup!==true)return false;
+      const power=watts(this._hass,e.necharge,'W');
+      if(power!==null && power>5)return false;
+      const status=this._hass.states?.[e.necharge_backup_charging];
+      const timestamp=reportedAt(status);
+      return String(status?.state??'').trim().toLowerCase()==='charging'
+        && timestamp>0 && Date.now()-timestamp<=5*60*1000;
+    }
+    _nechargeBackupMetric(metric,min,max,awake){
+      if(!this._nechargeBackupActive())return null;
+      const result=this._readTeslaMetric(this._conf.entities[`necharge_backup_${metric}`],min,max,awake);
+      // A missing/stale backup must not displace the central last-known value.
+      return result.fresh?result:null;
+    }
+    // NOTFALL-LOGIK END
     _centralTeslaMetric(key,metric,min,max,awake){
+      // NOTFALL-LOGIK BEGIN: telemetry override only during confirmed backup charging.
+      if(key==='necharge'){
+        const backup=this._nechargeBackupMetric(metric,min,max,awake);
+        if(backup)return backup;
+      }
+      // NOTFALL-LOGIK END
       const cachedId=this._conf.entities[`${key}_cache_${metric}`];
       const central=this._hass.states?.[cachedId];
       if(central){
@@ -679,6 +711,8 @@
     set hass(hass){this._hass=hass;if(this._conf)this._update();}
     _update(){
       const d=calculate(this._hass,this._conf.entities);
+      // NOTFALL-LOGIK: fallback affects rendering only, never the calculated power balance.
+      const nechargeBackup=this._nechargeBackupActive();
       const any=['pv','grid','marstek','solax'].some(k=>d[k]!==null);
       const live=this.shadowRoot.querySelector('.live');live.dataset.online=String(any);
       live.textContent=any?'LIVE · Messwerte':'LIVE · keine Daten';
@@ -687,12 +721,12 @@
         grid: d.grid===null?'Nicht verfügbar':d.grid>0?'Einspeisung':d.grid<0?'Netzbezug':'Ausgeglichen',
         marstek: d.marstek===null?'Nicht verfügbar':d.marstek>5?'Entladen':d.marstek < -5?'Laden':'Bereit',
         solax: d.solax===null?'Nicht verfügbar':d.solax>5?'Laden':d.solax < -5?'Entladen':'Bereit',
-        necharge:d.necharge===null?'Nicht verfügbar':d.necharge>5?'Laden':'Bereit',
+        necharge:nechargeBackup?'Laden · ESP32-Backup':d.necharge===null?'Nicht verfügbar':d.necharge>5?'Laden':'Bereit', // NOTFALL-LOGIK hook
         delta:d.delta===null?'Nicht verfügbar':d.delta>5?'Laden':'Bereit'
       };
       for(const k of ['pv','grid','marstek','solax','house','necharge','delta']){
         for(const el of this.shadowRoot.querySelectorAll(`[data-value="${k}"]`)){
-          el.textContent=(d[k]===null?'–':format(d[k]))+' W';
+          el.textContent=(d[k]===null || (k==='necharge' && nechargeBackup)?'–':format(d[k]))+' W'; // NOTFALL-LOGIK hook
         }
         for(const el of this.shadowRoot.querySelectorAll(`[data-note="${k}"]`))el.textContent=status[k];
       }
@@ -716,7 +750,7 @@
         el.dataset.state=gridWaveState;
       for(const key of ['necharge','delta'])
         for(const node of this.shadowRoot.querySelectorAll(`[data-ev="${key}"]`))
-          node.dataset.state=d[key]===null?'missing':d[key]>5?'active':'idle';
+          node.dataset.state=key==='necharge' && nechargeBackup?'active':d[key]===null?'missing':d[key]>5?'active':'idle'; // NOTFALL-LOGIK hook
       // Tesla values are kept separately from charging-power/flow calculation.
       this._renderTeslaTelemetry();
       this._paintSyncButtons();
@@ -734,7 +768,7 @@
         grid:d.grid===null||Math.abs(d.grid)<=5?'off':d.grid<0?'forward':'reverse',
         marstek:d.marstek===null||Math.abs(d.marstek)<=5?'off':d.marstek>0?'forward':'reverse',
         solax:d.solax===null||Math.abs(d.solax)<=5?'off':d.solax<0?'forward':'reverse',
-        necharge:d.necharge===null||d.necharge<=5?'off':'forward',
+        necharge:nechargeBackup?'forward':d.necharge===null||d.necharge<=5?'off':'forward', // NOTFALL-LOGIK hook
         delta:d.delta===null||d.delta<=5?'off':'forward'
       };
       for(const k of Object.keys(direction))

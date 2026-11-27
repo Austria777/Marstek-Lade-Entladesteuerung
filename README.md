@@ -1,3 +1,47 @@
+# Marstek Energy Studio v0.5.21 – NOTFALL-LOGIK: ESP32-Backup für Model 3
+
+Reine Notfallanzeige, unabhängig von der Lade-/Entladeregelung:
+Wenn NeCharge keinen gültigen Wert oder höchstens 5 W liefert und
+`sensor.tesla_model_3_highland_charging` den Zustand `Charging` mit einem
+höchstens 5 Minuten alten HA-Bericht meldet, werden Rahmen und Energiefluss
+des Model 3 grün. Die Leistung zeigt **– W**, der Status **Laden · ESP32-Backup**.
+Es wird keine Ladeleistung geschätzt oder in die Hausbilanz eingerechnet.
+Sobald NeCharge wieder mehr als 5 W meldet, übernimmt die normale Anzeige.
+Ein alter, fehlender oder anderer ESP32-Status aktiviert das Backup nicht.
+Der Status wird auch ohne weitere HA-Updates alle 30 Sekunden geprüft.
+
+Nur im Backupbetrieb werden aktuelle ESP32-Werte bevorzugt:
+- SoC: `sensor.tesla_model_3_highland_battery`
+- Reichweite: `sensor.tesla_model_3_highland_range`
+
+Fehlende oder veraltete Backup-Messwerte verdrängen die bisherige
+SoC-/Reichweitenanzeige nicht. Das Model Y bleibt unverändert.
+
+## NOTFALL-LOGIK abschalten oder entfernen
+
+Zum sofortigen Abschalten in der Karten-YAML unter `entities` ergänzen:
+
+```yaml
+necharge_emergency_backup: false
+```
+
+Die ergänzten Codeblöcke sind mit **NOTFALL-LOGIK BEGIN/END** markiert;
+alle Eingriffspunkte tragen einen **NOTFALL-LOGIK**-Kommentar.
+Für vollständigen Rückbau ohne Codebearbeitung einfach die vorhandene
+Ressource wieder auf `/local/marstek-energy-flow-card-v0520.js` stellen.
+Die bisherige Version bleibt im Repository erhalten.
+
+## Update
+
+1. `www/marstek-energy-flow-card-v0521.js` nach
+   `/config/www/marstek-energy-flow-card-v0521.js` kopieren.
+2. Die bestehende JavaScript-Modul-Ressource ersetzen durch
+   `/local/marstek-energy-flow-card-v0521.js` (nur eine Kartenversion laden).
+3. Dashboard neu laden. Kein HA-Neustart nötig. Die neuen Sensor-IDs und
+   der aktivierte Backup-Schalter sind bereits als Standard hinterlegt.
+
+---
+
 # Marstek Energy Studio v0.5.20 – Batterielinien grün beim Laden, rot beim Entladen
 
 Die Energieflusslinien für **SolaX Battery** und **Marstek Battery** erscheinen
