@@ -1,4 +1,4 @@
-/* Marstek Energy Flow Card 0.5.21 — optional NOTFALL ESP32 backup display for Model 3. */
+/* Marstek Energy Flow Card 0.5.22 — subtle blue house backdrop for the blue dashboard theme. */
 (() => {
   'use strict';
   const DEFAULT = Object.freeze({
@@ -379,7 +379,8 @@
       background-position:center 54%;background-size:cover;background-repeat:no-repeat;
       filter:blur(7px);opacity:.91;transform:scale(1.02)}
     .stage::after{content:'';position:absolute;z-index:0;inset:0;
-      background:linear-gradient(180deg,rgba(233,245,255,.24),rgba(236,248,255,.18) 55%,rgba(225,244,255,.33));
+      /* Blue tint stays below the SVG: telemetry and flow colors are unaffected. */
+      background:linear-gradient(180deg,rgba(16,101,173,.32),rgba(12,119,174,.26) 55%,rgba(5,61,113,.40));
       pointer-events:none}
     .diagram{width:100%;max-width:980px;display:block;margin:0 auto;
       position:relative;z-index:1;overflow:visible}

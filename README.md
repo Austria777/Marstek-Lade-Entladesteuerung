@@ -1,3 +1,21 @@
+# Marstek Energy Studio v0.5.22 – Dezente blaue Tönung des Haus-Hintergrunds
+
+Das verschwommene Haus erhält eine transparente blaue Tönung, passend
+zum neuen blauen Dashboard. Das Foto bleibt erkennbar und die bisherige
+Unschärfe auf Desktop und Smartphone erhalten. Die Tönung liegt unter
+dem SVG; Messwerte, Fahrzeugkarten und Energieflussfarben bleiben erhalten.
+Auch die separat abschaltbare **NOTFALL-LOGIK** aus v0.5.21 ist enthalten.
+
+**Update:**
+
+1. `www/marstek-energy-flow-card-v0522.js` nach
+   `/config/www/marstek-energy-flow-card-v0522.js` kopieren.
+2. Die bestehende JavaScript-Modul-Ressource ersetzen durch
+   `/local/marstek-energy-flow-card-v0522.js` (nur eine Kartenversion laden).
+3. Dashboard neu laden. Kein Home-Assistant-Neustart nötig.
+
+---
+
 # Marstek Energy Studio v0.5.21 – NOTFALL-LOGIK: ESP32-Backup für Model 3
 
 Reine Notfallanzeige, unabhängig von der Lade-/Entladeregelung:
